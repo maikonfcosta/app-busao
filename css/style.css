@@ -1,0 +1,220 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #f0f9ff;
+}
+
+.bus-layout {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    max-width: 600px;
+}
+
+.bus-slot-btn {
+    aspect-ratio: 1/1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.8rem;
+    line-height: 1.1;
+    transition: all 0.2s;
+    overflow: hidden;
+    word-break: break-word;
+}
+
+.bus-slot-btn:not(.filled):hover {
+    transform: scale(1.05);
+}
+
+.bus-slot-btn.filled {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.bus-slot-btn.double {
+    grid-column: span 2;
+    aspect-ratio: 2/1;
+}
+
+.passenger-card {
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background-color: white;
+}
+
+.passenger-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.passenger-traits {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.trait {
+    background-color: #e0f2fe;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.8rem;
+}
+
+.passenger-effect {
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+
+.adjacent-info {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-top: 0.5rem;
+}
+
+.selected-improvement {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    background-color: #e0f2fe;
+    border-radius: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.remove-improvement {
+    background-color: #ef4444;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-left: 0.5rem;
+    cursor: pointer;
+}
+
+.error-message {
+    color: #ef4444;
+    font-weight: bold;
+    margin-top: 0.5rem;
+}
+
+.player-card {
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background-color: white;
+    transition: all 0.3s;
+}
+
+.player-card.active {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+.player-card.winner {
+    border-color: #10b981;
+    background-color: #ecfdf5;
+}
+
+.player-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.player-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.player-score {
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: #1e40af;
+}
+
+.player-details {
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
+.winner-badge {
+    background-color: #10b981;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+.player-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.ranking-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s;
+}
+
+.ranking-position {
+    font-weight: 700;
+    font-size: 1.25rem;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.position-1 {
+    background-color: #fcd34d;
+    color: #92400e;
+}
+
+.position-2 {
+    background-color: #e5e7eb;
+    color: #4b5563;
+}
+
+.position-3 {
+    background-color: #d97706;
+    color: #fef3c7;
+}
+
+.ranking-name {
+    flex-grow: 1;
+    margin-left: 1rem;
+    font-weight: 500;
+}
+
+.ranking-score {
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: #1e40af;
+}
+
+.ranking-trophy {
+    font-size: 1.5rem;
+    margin-right: 0.5rem;
+}

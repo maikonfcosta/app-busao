@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculador de Pontuação do Busão</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold text-center mb-6 text-blue-800">Calculador de Pontuação do Busão</h1>
+        
+        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-xl font-semibold mb-4 text-blue-700">Gerenciamento de Jogadores</h2>
+            
+            <div class="flex flex-wrap gap-4 mb-4">
+                <div class="flex-grow">
+                    <input type="text" id="new-player-name" placeholder="Nome do jogador" class="w-full p-2 border border-gray-300 rounded">
+                </div>
+                <button id="add-player-btn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Adicionar Jogador
+                </button>
+            </div>
+            
+            <div id="players-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                </div>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-4 text-blue-700">Configuração</h2>
+                
+                <div class="mb-6">
+                    <h3 class="font-medium mb-2">0. Jogador Ativo</h3>
+                    <select id="active-player-select" class="w-full p-2 border border-gray-300 rounded">
+                        <option value="">Selecione um jogador...</option>
+                    </select>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="font-medium mb-2">1. Selecione o Motorista</h3>
+                    <select id="driver-select" class="w-full p-2 border border-gray-300 rounded">
+                        <option value="">Selecione um motorista...</option>
+                        <option value="Bigode">Bigode</option>
+                        <option value="Lucinha">Lucinha</option>
+                        <option value="Montanha">Montanha</option>
+                        <option value="Paty">Paty</option>
+                        <option value="Pedrinho">Pedrinho</option>
+                        <option value="Pereirão">Pereirão</option>
+                        <option value="Seu Zé (O Experiente)">Seu Zé (O Experiente)</option>
+                        <option value="Juca (O Apressado)">Juca (O Apressado)</option>
+                        <option value="Dona Marta (A Simpática)">Dona Marta (A Simpática)</option>
+                        <option value="Seu Jorge (O Paciente)">Seu Jorge (O Paciente)</option>
+                        <option value="Dona Cleide (A Atenciosa)">Dona Cleide (A Atenciosa)</option>
+                        <option value="Marcelo (O Novato)">Marcelo (O Novato)</option>
+                        <option value="Robson (O Animado)">Robson (O Animado)</option>
+                    </select>
+                    <div id="driver-info" class="mt-2 text-sm text-gray-600"></div>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="font-medium mb-2">2. Selecione as Melhorias (máx. 3)</h3>
+                    <div class="flex gap-2 mb-2">
+                        <select id="improvement-select" class="flex-grow p-2 border border-gray-300 rounded">
+                            <option value="">Selecione uma melhoria...</option>
+                            <option value="Wi-Fi e tomadas">Wi-Fi e tomadas</option>
+                            <option value="Acessibilidade">Acessibilidade</option>
+                            <option value="Assentos Reclináveis">Assentos Reclináveis</option>
+                            <option value="Ar-condicionado">Ar-condicionado</option>
+                            <option value="Banheiro">Banheiro</option>
+                            <option value="Sistema de Som">Sistema de Som</option>
+                            <option value="TV de bordo">TV de bordo</option>
+                            <option value="Porta-copos">Porta-copos</option>
+                            <option value="Cortinas">Cortinas</option>
+                        </select>
+                        <button id="add-improvement-btn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-gray-400">
+                            Adicionar
+                        </button>
+                    </div>
+                    <ul id="selected-improvements-list" class="list-none p-0"></ul>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="font-medium mb-2">3. Selecione os Passageiros</h3>
+                    <div class="flex gap-2 mb-2">
+                        <select id="passenger-select" class="flex-grow p-2 border border-gray-300 rounded">
+                            <option value="">Selecione um passageiro...</option>
+                            <option value="Ana (A Gestante)">Ana (A Gestante)</option>
+                            <option value="Caio (O Estudante)">Caio (O Estudante)</option>
+                            <option value="Cara Misterioso">Cara Misterioso</option>
+                            <option value="Charles (O Maromba)">Charles (O Maromba)</option>
+                            <option value="Cláudio (O Pastor)">Cláudio (O Pastor)</option>
+                            <option value="Célio (O Claustrofóbico)">Célio (O Claustrofóbico)</option>
+                            <option value="Dabs (A Board Gamer)">Dabs (A Board Gamer)</option>
+                            <option value="Dona Cida (A Tagarela)">Dona Cida (A Tagarela)</option>
+                            <option value="Dona Fausta (A Desconfiada)">Dona Fausta (A Desconfiada)</option>
+                            <option value="Dona Mirtes (A Fofoqueira)">Dona Mirtes (A Fofoqueira)</option>
+                            <option value="Fábio (O Vendedor)">Fábio (O Vendedor)</option>
+                            <option value="Fabão (O Grandão)">Fabão (O Grandão)</option>
+                            <option value="João (PCD)">João (PCD)</option>
+                            <option value="Jorge (O Perdido)">Jorge (O Perdido)</option>
+                            <option value="Leandro (O Dorminhoco)">Leandro (O Dorminhoco)</option>
+                            <option value="Luíz (Motolover)">Luíz (Motolover)</option>
+                            <option value="Luz (Motolover)">Luz (Motolover)</option>
+                            <option value="Mari (A Conectada)">Mari (A Conectada)</option>
+                            <option value="Márcia e Enzo (A Mãe e o Pestinha)">Márcia e Enzo (A Mãe e o Pestinha)</option>
+                            <option value="Peter (O Playboy)">Peter (O Playboy)</option>
+                            <option value="Rato (O Malandro)">Rato (O Malandro)</option>
+                            <option value="Raul (O Pancada)">Raul (O Pancada)</option>
+                            <option value="Roberto (O Bonzinho)">Roberto (O Bonzinho)</option>
+                            <option value="Seu Amadeu (O Irritado)">Seu Amadeu (O Irritado)</option>
+                            <option value="Seu Horácio (O Antisocial)">Seu Horácio (O Antisocial)</option>
+                            <option value="Sheila (A Barraqueira)">Sheila (A Barraqueira)</option>
+                            <option value="Sol (O Good Vibes)">Sol (O Good Vibes)</option>
+                            <option value="Sophia (A Blogueira)">Sophia (A Blogueira)</option>
+                            <option value="Waldisnei (O Cheiroso)">Waldisnei (O Cheiroso)</option>
+                            <option value="Wesley (DJ do busão)">Wesley (DJ do busão)</option>
+                            <option value="Wilson (O Pai de Planta)">Wilson (O Pai de Planta)</option>
+                        </select>
+                    </div>
+                    <div id="passenger-info" class="mt-2 text-sm text-gray-600"></div>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="font-medium mb-2">4. Posicione os Passageiros no Busão</h3>
+                    <div class="bus-layout mx-auto">
+                        <button class="bus-slot-btn bg-gray-200 hover:bg-gray-300" data-slot="1">Assento 1</button>
+                        <button class="bus-slot-btn bg-gray-200 hover:bg-gray-300" data-slot="2">Assento 2</button>
+                        <button class="bus-slot-btn bg-gray-200 hover:bg-gray-300" data-slot="3">Assento 3</button>
+                        <button class="bus-slot-btn bg-gray-200 hover:bg-gray-300" data-slot="4">Assento 4</button>
+                        <button class="bus-slot-btn bg-gray-200 hover:bg-gray-300" data-slot="5">Assento 5</button>
+                        <button class="bus-slot-btn bg-gray-200 hover:bg-gray-300" data-slot="6">Assento 6</button>
+                        <button class="bus-slot-btn bg-gray-200 hover:bg-gray-300" data-slot="7">Assento 7</button>
+                        <button class="bus-slot-btn bg-gray-200 hover:bg-gray-300" data-slot="8">Assento 8</button>
+                        <button class="bus-slot-btn bg-gray-200 hover:bg-gray-300" data-slot="9">Assento 9</button>
+                        <button class="bus-slot-btn bg-gray-200 hover:bg-gray-300" data-slot="10">Assento 10</button>
+                        <button class="bus-slot-btn bg-gray-200 hover:bg-gray-300" data-slot="11">Assento 11</button>
+                        <button class="bus-slot-btn bg-gray-200 hover:bg-gray-300" data-slot="12">Assento 12</button>
+                    </div>
+                    <div class="text-center mt-4">
+                        <button id="clear-bus-btn" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+                            Limpar Busão
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="font-medium mb-2">5. Cartas na Mão</h3>
+                    <input type="number" id="cards-in-hand" min="0" value="0" class="w-full p-2 border border-gray-300 rounded">
+                </div>
+                
+                <div class="text-center mt-6">
+                    <button id="calculate-btn" class="bg-green-600 text-white px-8 py-3 rounded-lg text-lg font-medium hover:bg-green-700">
+                        Calcular Pontuação
+                    </button>
+                </div>
+            </div>
+            
+            <div>
+                <div id="results" class="bg-white p-6 rounded-lg shadow-md mb-6 hidden">
+                    <h2 class="text-xl font-semibold mb-4 text-green-700">Resultados</h2>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="bg-blue-50 p-3 rounded">
+                            <div class="text-sm text-blue-700">Pontos do Motorista</div>
+                            <div id="driver-score" class="text-2xl font-bold">0</div>
+                        </div>
+                        <div class="bg-purple-50 p-3 rounded">
+                            <div class="text-sm text-purple-700">Pontos das Melhorias</div>
+                            <div id="improvements-score" class="text-2xl font-bold">0</div>
+                        </div>
+                        <div class="bg-green-50 p-3 rounded">
+                            <div class="text-sm text-green-700">Pontos dos Passageiros</div>
+                            <div id="passengers-score" class="text-2xl font-bold">0</div>
+                        </div>
+                        <div class="bg-red-50 p-3 rounded">
+                            <div class="text-sm text-red-700">Penalidade de Cartas</div>
+                            <div id="hand-penalty" class="text-2xl font-bold">0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-yellow-50 p-4 rounded-lg text-center mb-6">
+                        <div class="text-sm text-yellow-700 mb-1">Pontuação Total</div>
+                        <div id="total-score" class="text-4xl font-bold text-yellow-800">0</div>
+                    </div>
+                    
+                    <div id="error-messages" class="text-red-600 mb-4"></div>
+                    
+                    <div class="text-center mt-4">
+                        <button id="save-score-btn" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+                            Registrar Pontuação para o Jogador
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="passenger-details" class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold mb-4 text-blue-700">Detalhes dos Passageiros</h2>
+                    <div id="passenger-list"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-lg shadow-md mt-8">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-blue-700">Ranking de Jogadores</h2>
+                <button id="calculate-ranking-btn" class="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700">
+                    Calcular Rankeamento
+                </button>
+            </div>
+            <div id="ranking-container" class="space-y-2">
+                <p id="no-ranking" class="text-gray-500 text-center">Nenhuma pontuação registrada ainda.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+</body>
+</html>
