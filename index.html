@@ -3,182 +3,251 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Calculadora – Busão (v3.4)</title>
-    <link rel="stylesheet" href="css/style.css" />
+    <title>Calculadora – Busão (v4.0)</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="wrap">
-        <div class="panel" id="leftPanel">
-            <header><h1>Busão – Calculadora</h1></header>
+<div class="wrap">
+  <div class="panel" id="leftPanel">
+    <header><h1>Busão – Calculadora</h1></header>
 
-            <div class="tabs-top">
-                <button class="tabbtn act" data-tab="tab-config">Configuração</button>
-                <button class="tabbtn" data-tab="tab-seats">Assentos</button>
-                <button class="tabbtn" data-tab="tab-catalog">Catálogo</button>
-                <button class="tabbtn" data-tab="tab-regrasfaq">Regras & FAQ</button>
-            </div>
-
-            <div class="tabview act" id="tab-config">
-                <div class="section">
-                    <label>Jogador</label>
-                    <input id="playerName" placeholder="Nome do jogador" />
-                </div>
-
-                <div class="section">
-                    <label>Motorista</label>
-                    <select id="driver"></select>
-                    <div id="driverInfo" class="drivers" style="margin-top:10px"></div>
-                    <div class="inline">
-                        <input type="checkbox" id="expCobradores" />
-                        <label for="expCobradores" style="margin:0">Ativar Expansão COBRADORES (máx. 1 no ônibus)</label>
-                    </div>
-                    <div class="inline">
-                        <input type="checkbox" id="expApaixonados" />
-                        <label for="expApaixonados" style="margin:0">Ativar Expansão: Os Apaixonados 💘</label>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <label>Melhorias do Busão (até 3, sem repetir)</label>
-                    <div id="improvButtons" class="bar" style="flex-wrap:wrap"></div>
-                    <div id="improvInfo" class="drivers" style="margin-top:10px"></div>
-                    <div class="chips" style="margin-top:8px">
-                        <span class="chip">Dona Fausta no busão → melhorias não pontuam.</span>
-                        <span class="chip">Apaixonados (2+ adjacentes) → dobro da soma dos pontos base do grupo.</span>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <label>Cartas na mão (–1 cada)</label>
-                    <input id="handCount" type="number" min="0" step="1" value="0" />
-                </div>
-            </div>
-
-            <div class="tabview" id="tab-seats">
-                <div class="section">
-                    <div class="section-title">
-                        <span>Selecione o Assento</span>
-                        <button id="btnVisualHelp" class="btn ghost sm" title="Ajuda de adjacência">?</button>
-                    </div>
-                    <div class="section-sub">Clique no assento correspondente e escolha o personagem, o calculo é automatizado após escolher os assentos válidos..</div>
-                    <div id="visualHelp" class="popover">
-                        <b>Adjacência:</b> esquerda/direita, cima/baixo, diagonais. Ex.: Assento 3 → adjacentes: 2, 4, 8, 9, 10.
-                    </div>
-
-                    <div id="busVisual" class="bus-visual">
-                        <div class="driver"><div class="label">motorista</div></div>
-                        <div class="wheel w1"></div><div class="wheel w2"></div>
-                        <div class="seats" id="busVisualSeats"></div>
-                    </div>
-                </div>
-
-                <div class="grid" id="grid"></div>
-                <div class="section"><div class="chips"><span class="chip">Adjacências válidas – ortogonais e diagonais</span></div></div>
-
-                <div class="section">
-                    <label>Ações</label>
-                    <div class="bar">
-                        <button class="btn acc" id="btnClearSeats">Limpar assentos</button>
-                        <button class="btn ghost" id="btnNewRound">Nova pontuação</button>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <label>Salvar no Ranking</label>
-                    <div class="bar" style="margin-bottom:8px">
-                        <button class="btn accent" id="btnSaveScore">Salvar pontuação</button>
-                        <button class="btn warn" id="btnResetRanking">Zerar ranking</button>
-                    </div>
-                    <div class="muted">Pontuações salvas no seu navegador (localStorage).</div>
-                </div>
-            </div>
-
-            <div class="tabview" id="tab-catalog">
-                <div class="section">
-                    <div class="section-title"><span>Catálogo de Cartas</span></div>
-                    <div class="catalog">
-                        <div class="cat-controls">
-                            <input id="catalogSearch" placeholder="Busque por nome, tag ou palavra do efeito (ex.: Jovem, Tranquilo, Wi-Fi...)" />
-                            <button class="btn sm" id="clearCatalogSearch">Limpar</button>
-                            <div class="chips">
-                                <span class="chip">Dica: inclui Passageiros, Cobradores, Motoristas e Melhorias</span>
-                            </div>
-                        </div>
-                        <div id="catalogContent"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="tabview" id="tab-regrasfaq">
-                <div class="section">
-                    <div class="section-title"><span>Regras & FAQ</span></div>
-                    <div class="tabs" style="display:flex;border-bottom:1px solid var(--line)">
-                        <div class="itab act" data-itab="regras" style="padding:10px 14px;cursor:pointer;color:#cbd5e1;border-bottom:2px solid transparent">Regras (online)</div>
-                        <div class="itab" data-itab="faq" style="padding:10px 14px;cursor:pointer;color:#cbd5e1;border-bottom:2px solid transparent">FAQ & Contato</div>
-                    </div>
-                    <div class="tabpan act" id="itab-regras">
-                        <p><b>Resumo rápido</b></p>
-                        <ul>
-                            <li>Objetivo: somar pontos com passageiros + motorista + melhorias.</li>
-                            <li>Fim: Fim da Linha, Busão lotado ou fim das cartas da rua.</li>
-                            <li>Pontuação: passageiros (efeitos), motorista (+1 por tags), melhorias (+1 por tags) e –1 por carta na mão.</li>
-                            <li>Apaixonados: Podem repetir; se 2+ estiverem adjacentes formam um grupo que <b>dobra</b> a soma dos <b>pontos base</b> do grupo.</li>
-                        </ul>
-                    </div>
-                    <div class="tabpan" id="itab-faq">
-                        <p><b>Perguntas frequentes</b></p>
-                        <details open><summary>Como funciona a adjacência?</summary><div class="muted">Esquerda/direita + 3 da outra fileira (motorista não conta).</div></details>
-                        <details><summary>“Entre ele e o motorista” (Motolover)</summary><div class="muted">Conta todos nas colunas à esquerda (duas fileiras).</div></details>
-                        <details><summary>Cartas na mão descontam?</summary><div class="muted">Sim, –1 por carta restante.</div></details>
-                        <details><summary>Como funciona a expansão dos Apaixonados?</summary><div class="muted">Podem ser duplicados. Se 2+ estiverem adjacentes, dobram a soma dos pontos base do grupo.</div></details>
-                        <p style="margin-top:10px">Contato: <a href="mailto:contato@busao.game">contato@busao.game</a> • <a href="https://wa.me/5500000000000" target="_blank" rel="noopener">WhatsApp</a></p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="panel">
-            <header><h1>Resultado</h1><small id="playerTag"></small></header>
-            <div class="section totals">
-                <div class="total"><h3>Total</h3><div id="totalScore" class="v kpi neu">0</div></div>
-                <div class="total"><h3>Quebra</h3><div class="muted">Passageiros: <b id="sumPassengers">0</b></div><div class="muted">Motorista: <b id="sumDriver">0</b></div><div class="muted">Melhorias: <b id="sumImprov">0</b></div><div class="muted">Mão: <b id="sumHand">0</b></div>
-                </div>
-            </div>
-            <div class="section" style="padding-top:8px"><label>Explicação por assento</label><div id="warnings" class="muted" style="margin-top:6px"></div><div id="explain" class="explain"></div></div>
-            <div class="section">
-                <label>Ranking</label>
-                <div class="table-wrap">
-                    <table id="rankTable"><thead><tr><th>#</th><th>Jogador</th><th>Motorista</th><th>Melhorias</th><th class="right">Pontuação</th></tr></thead><tbody></tbody></table>
-                </div>
-            </div>
-            <div class="foot">Motorista e melhorias: +1 por ocorrência das subcategorias descritas. Cartas sem exigência de embarque sempre contam para eles.</div>
-        </div>
+    <div class="tabs-top">
+      <button class="tabbtn act" data-tab="tab-config">Configuração</button>
+      <button class="tabbtn" data-tab="tab-seats">Assentos</button>
+      <button class="tabbtn" data-tab="tab-catalog">Catálogo</button>
+      <button class="tabbtn" data-tab="tab-regrasfaq">Regras & FAQ</button>
     </div>
 
-    <div id="pickerModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
-        <div class="modal-card">
-            <div class="modal-head">
-                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                    <strong id="pickerTitle">Escolher carta para o assento</strong>
-                    <span id="pickerSeatLabel" class="chip"></span>
-                </div>
-                <div class="bar">
-                    <button id="pickerClear" class="btn sm">Limpar assento</button>
-                    <button id="pickerClose" class="btn ghost sm">Fechar</button>
-                </div>
-            </div>
-            <div class="modal-body">
-                <div class="picker-filter">
-                    <input id="pickerSearch" placeholder="Buscar por nome/tag/efeito..." />
-                    <button class="pill act" data-tab="pass">Passageiros</button>
-                    <button class="pill" data-tab="cob">Cobradores</button>
-                    <button class="pill" data-tab="apx">Apaixonados</button>
-                </div>
-                <div id="pickerGrid" class="picker-grid"></div>
-            </div>
+    <div class="tabview act" id="tab-config">
+      <div class="section">
+        <label>Jogador</label>
+        <input id="playerName" placeholder="Nome do jogador" />
+      </div>
+
+      <div class="section">
+        <label>Motorista</label>
+        <select id="driver"></select>
+        <div id="driverInfo" class="drivers" style="margin-top:10px"></div>
+        <div class="inline">
+          <input type="checkbox" id="expCobradores" />
+          <label for="expCobradores" style="margin:0">Ativar Expansão COBRADORES 💶</label>
         </div>
+        <div class="inline">
+          <input type="checkbox" id="expApaixonados" />
+          <label for="expApaixonados" style="margin:0">Ativar Expansão: Os Apaixonados 💘</label>
+        </div>
+        <div class="inline">
+          <input type="checkbox" id="expPerrengues" />
+          <label for="expPerrengues" style="margin:0">Ativar Expansão: Perrengues ⚠️</label>
+        </div>
+        <div class="inline">
+          <input type="checkbox" id="expEstouNoBusao" />
+          <label for="expEstouNoBusao" style="margin:0">Ativar Expansão: Estou no busão 👍</label>
+        </div>
+        <div class="inline">
+          <input type="checkbox" id="expLendasUrbanas" />
+          <label for="expLendasUrbanas" style="margin:0">Ativar Expansão: Lendas Urbanas 👻</label>
+        </div>
+        <div class="inline">
+          <input type="checkbox" id="expGrupoPagode" />
+          <label for="expGrupoPagode" style="margin:0">Ativar Expansão: Grupo de Pagode 🎵</label>
+        </div>
+        <div class="inline">
+          <input type="checkbox" id="expRotasDiarias" />
+          <label for="expRotasDiarias" style="margin:0">Ativar Expansão: Rotas Diárias 🚌</label>
+        </div>
+      </div>
+
+      <div class="section">
+        <label>Melhorias do Busão (até 3, sem repetir)</label>
+        <div id="improvButtons" class="bar" style="flex-wrap:wrap"></div>
+        <div id="improvInfo" class="drivers" style="margin-top:10px"></div>
+        <div class="chips" style="margin-top:8px">
+          <span class="chip">Dona Fausta no busão → melhorias não pontuam.</span>
+          <span class="chip">Apaixonados (2+ adjacentes) → dobro da soma dos pontos base do grupo.</span>
+        </div>
+      </div>
+
+      <div class="section" id="perrenguesSection" style="display:none;">
+        <label>Perrengues (sem limite)</label>
+        <div id="perrenguesButtons" class="bar" style="flex-wrap:wrap"></div>
+        <div id="perrenguesInfo" class="drivers" style="margin-top:10px"></div>
+      </div>
+
+      <div class="section" id="rotasDiariasSection" style="display:none;">
+        <label>Rotas Diárias (sem limite)</label>
+        <div id="rotasDiariasButtons" class="bar" style="flex-wrap:wrap"></div>
+        <div id="rotasDiariasInfo" class="drivers" style="margin-top:10px"></div>
+      </div>
+
+      <div class="section">
+        <label>Cartas na mão (–1 cada)</label>
+        <input id="handCount" type="number" min="0" step="1" value="0" />
+      </div>
     </div>
 
-    <script src="js/script.js"></script>
+    <div class="tabview" id="tab-seats">
+      <div class="section">
+        <div class="section-title">
+          <span>Selecione o Assento</span>
+          <button id="btnVisualHelp" class="btn ghost sm" title="Ajuda de adjacência">?</button>
+        </div>
+        <div class="section-sub">Clique no assento correspondente e escolha o personagem, o calculo é automatizado após escolher os assentos válidos..</div>
+        <div id="visualHelp" class="popover">
+          <b>Adjacência:</b> esquerda/direita, cima/baixo, diagonais. Ex.: Assento 3 → adjacentes: 2, 4, 8, 9, 10.
+        </div>
+
+        <div id="busVisual" class="bus-visual">
+          <div class="driver"><div class="label">motorista</div></div>
+          <div class="wheel w1"></div><div class="wheel w2"></div>
+          <div class="seats" id="busVisualSeats"></div>
+        </div>
+      </div>
+
+      <div class="grid" id="grid"></div>
+      <div class="section"><div class="chips"><span class="chip">Adjacências válidas – ortogonais e diagonais</span></div></div>
+
+      <div class="section">
+        <label>Ações</label>
+        <div class="bar">
+          <button class="btn acc" id="btnClearSeats">Limpar assentos</button>
+          <button class="btn ghost" id="btnNewRound">Nova pontuação</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <label>Salvar no Ranking</label>
+        <div class="bar" style="margin-bottom:8px">
+          <button class="btn accent" id="btnSaveScore">Salvar pontuação</button>
+          <button class="btn warn" id="btnResetRanking">Zerar ranking</button>
+        </div>
+        <div class="muted">Pontuações salvas no seu navegador (localStorage).</div>
+      </div>
+    </div>
+
+    <div class="tabview" id="tab-catalog">
+      <div class="section">
+        <div class="section-title"><span>Catálogo de Cartas</span></div>
+        <div class="catalog">
+          <div class="cat-controls">
+            <input id="catalogSearch" placeholder="Busque por nome, tag ou palavra do efeito (ex.: Jovem, Tranquilo, Wi-Fi...)" />
+            <button class="btn sm" id="clearCatalogSearch">Limpar</button>
+            <div class="chips">
+              <span class="chip">Dica: inclui Passageiros, Cobradores, Motoristas e Melhorias</span>
+            </div>
+          </div>
+          <div id="catalogContent"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabview" id="tab-regrasfaq">
+        <div class="section">
+            <div class="section-title"><span>Regras & FAQ</span></div>
+            <div class="tabs" style="display:flex;border-bottom:1px solid var(--line)">
+                <div class="itab act" data-itab="regras" style="padding:10px 14px;cursor:pointer;color:#60a5fa;border-bottom:2px solid #60a5fa">Regras (online)</div>
+                <div class="itab" data-itab="faq" style="padding:10px 14px;cursor:pointer;color:#cbd5e1;border-bottom:2px solid transparent">FAQ & Contato</div>
+            </div>
+        </div>
+        <div class="rules-container">
+            <h1>Regras do Busão</h1>
+            <p>Jogo de estratégia e equilíbrio para 2 a 6 jogadores</p>
+            
+            <div class="quick-summary">
+                <p><b>Resumo Rápido</b></p>
+                <ul>
+                    <li><b>Objetivo:</b> Somar pontos com passageiros + motorista + melhorias.</li>
+                    <li><b>Fim do jogo:</b> Fim da Linha, Busão lotado ou fim das cartas da rua.</li>
+                    <li><b>Pontuação:</b> Passageiros (efeitos), motorista (+1 por tags), melhorias (+1 por tags) e –1 por carta na mão.</li>
+                    <li><b>Apaixonados:</b> Podem repetir; se 2+ estiverem adjacentes formam um grupo que <b>dobra</b> a soma dos <b>pontos base</b> do grupo.</li>
+                    <li><b>Grupo de Pagode:</b> Se reunir os 5 integrantes, ganha 50 pontos extras!</li>
+                </ul>
+            </div>
+        
+            <details class="rule-section" open>
+                <summary><h2>Introdução</h2></summary>
+                <div class="rule-content-body">
+                    <p>Busão é um jogo de estratégia e equilibro para 2 a 6 jogadores, onde você assume o volante de um ônibus lotado, com a missão de controlar o embarque e desembarque de passageiros, garantindo conforto e evitando caos a bordo.</p>
+                    <p>A cada rodada, você pode tentar resolver imprevistos para manter a harmonia entre os passageiros que são tão diferentes entre si. Afinal, ninguém gosta de sentar-se ao lado de alguém indesejado.</p>
+                    <p>Use suas cartas com inteligência, tome decisões rápidas e garanta o maior número possível de pontos com suas ações. O Busão está nas suas mãos e a paz nessa viagem também!</p>
+                </div>
+            </details>
+            
+            <details class="rule-section">
+                <summary><h2>Expansões</h2></summary>
+                <div class="rule-content-body">
+                    <p><b>Estou no Busão:</b> Passageiros especiais com habilidades únicas.</p>
+                    <p><b>Lendas Urbanas:</b> Personagens místicos com efeitos poderosos.</p>
+                    <p><b>Grupo de Pagode:</b> 5 integrantes especiais - reúna todos para ganhar 50 pontos extras!</p>
+                    <p><b>Rotas Diárias:</b> Cartas de bônus que dão pontos extras por condições específicas.</p>
+                    <p><b>Perrengues:</b> Eventos desafiadores que afetam todos os jogadores.</p>
+                </div>
+            </details>
+        </div>
+        <div class="tabpan" id="itab-faq" style="display: none; padding: 12px;">
+          <p><b>Perguntas frequentes</b></p>
+          <details><summary>Como funciona a adjacência?</summary><div class="muted">Esquerda/direita + 3 da outra fileira (motorista não conta).</div></details>
+          <details><summary>“Entre ele e o motorista” (Motolover)</summary><div class="muted">Conta todos nas colunas à esquerda (duas fileiras).</div></details>
+          <details><summary>Cartas na mão descontam?</summary><div class="muted">Sim, –1 por carta restante (exceto se Isabel estiver no busão).</div></details>
+          <details><summary>Como funciona a expansão dos Apaixonados?</summary><div class="muted">Podem ser duplicados. Se 2+ estiverem adjacentes, dobram a soma dos pontos base do grupo.</div></details>
+          <details><summary>Como funciona o Grupo de Pagode?</summary><div class="muted">Se reunir os 5 integrantes, ganha 50 pontos extras além das pontuações normais.</div></details>
+          <p style="margin-top:10px">Contato: <a href="mailto:contato@busao.game">contato@busao.game</a></p>
+        </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <header><h1>Resultado</h1><small id="playerTag"></small></header>
+    <div class="section totals">
+      <div class="total"><h3>Total</h3><div id="totalScore" class="v kpi neu">0</div></div>
+      <div class="total"><h3>Quebra</h3>
+        <div class="muted">Passageiros: <b id="sumPassengers">0</b></div>
+        <div class="muted">Motorista: <b id="sumDriver">0</b></div>
+        <div class="muted">Melhorias: <b id="sumImprov">0</b></div>
+        <div class="muted">Perrengues: <b id="sumPerrengues">0</b></div>
+        <div class="muted">Rotas Diárias: <b id="sumRotasDiarias">0</b></div>
+        <div class="muted">Mão: <b id="sumHand">0</b></div>
+      </div>
+    </div>
+    <div class="section" style="padding-top:8px"><label>Explicação por assento</label><div id="warnings" class="muted" style="margin-top:6px"></div><div id="explain" class="explain"></div></div>
+    <div class="section">
+      <label>Ranking</label>
+      <div class="table-wrap">
+        <table id="rankTable"><thead><tr><th>#</th><th>Jogador</th><th>Motorista</th><th>Melhorias</th><th class="right">Pontuação</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+    <div class="foot">Motorista e melhorias: +1 por ocorrência das subcategorias descritas. Cartas sem exigência de embarque sempre contam para eles.</div>
+  </div>
+</div>
+
+<div id="pickerModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <strong id="pickerTitle">Escolher carta para o assento</strong>
+        <span id="pickerSeatLabel" class="chip"></span>
+      </div>
+      <div class="bar">
+        <button id="pickerClear" class="btn sm">Limpar assento</button>
+        <button id="pickerClose" class="btn ghost sm">Fechar</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="picker-filter">
+        <input id="pickerSearch" placeholder="Buscar por nome/tag/efeito..." />
+        <button class="pill act" data-tab="pass">Passageiros</button>
+        <button class="pill" data-tab="cob">Cobradores</button>
+        <button class="pill" data-tab="apx">Apaixonados</button>
+        <button class="pill" data-tab="estou">Estou no Busão</button>
+        <button class="pill" data-tab="lendas">Lendas Urbanas</button>
+        <button class="pill" data-tab="pagode">Grupo de Pagode</button>
+      </div>
+      <div id="pickerGrid" class="picker-grid"></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>
