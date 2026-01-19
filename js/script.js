@@ -454,7 +454,7 @@ const CARD_DB = [
      text:"Ao embarcar, pode realizar uma Melhoria do Busão sem custo.",
      note:"Ao embarcar, pode realizar uma Melhoria do Busão sem custo."
   }),
-  P({id:"dona_neuza",nome:"Dona Neuza (A Salcoleira)",base:4,faixa:"Adulto",temper:"Caótico",comp:"Comunicativo",impacto:"durante",
+  P({id:"dona_neuza",nome:"Dona Neuza (A Sacoleira)",base:4,faixa:"Adulto",temper:"Caótico",comp:"Comunicativo",impacto:"durante",
      text:"Enquanto ela estiver embarcada, quem controla o Busão recebe +1 ponto de ação.",
      note:"Enquanto ela estiver embarcada, quem controla o Busão recebe +1 ponto de ação."
   })
