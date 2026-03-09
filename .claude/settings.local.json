@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc --noEmit)",
+      "Bash(node --check js/script.js)",
+      "Bash(node --check js/main.js)",
+      "Bash(npx --yes jshint js/script.js js/main.js)",
+      "Bash(npx --yes eslint --no-eslintrc --rule '{\"\"no-unused-vars\"\": \"\"warn\"\", \"\"no-undef\"\": \"\"warn\"\"}' --env browser,es2020 js/script.js js/main.js)",
+      "Bash(npx eslint --version)",
+      "Bash(node --check \"c:/Users/maiki/Documents/PESSOAL/app-busao/js/main.js\")",
+      "Bash(node --check \"c:/Users/maiki/Documents/PESSOAL/app-busao/js/script.js\")"
+    ]
+  }
+}

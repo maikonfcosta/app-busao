@@ -127,10 +127,10 @@ function mountLeft(){
 
 function renderDriverInfo(){
   const d = DRIVERS.find(x=>x.id===DRIVER_SEL.value);
-  if(!d || !d.id){
-    DRIVER_INFO.innerHTML = `<div class="driver-card"><div><b>Sem motorista</b></div><div class="muted">Selecione um motorista para ativar o bônus.</div></div>`;
-  }else{
+  if(d?.id){
     DRIVER_INFO.innerHTML = `<div class="driver-card"><div><b>${d.nome}</b></div><div class="muted">+1 por cada ocorrência de: ${d.bonus.join(" • ")}</div></div>`;
+  }else{
+    DRIVER_INFO.innerHTML = `<div class="driver-card"><div><b>Sem motorista</b></div><div class="muted">Selecione um motorista para ativar o bônus.</div></div>`;
   }
   renderImprovInfo();
 }
@@ -394,7 +394,7 @@ function seatNumToRC(n){ return n<=6 ? {row:0,col:n-1} : {row:1,col:n-7}; }
 function isSeatBlockedByWilson(pos){
   const other = otherPos(pos);
   const otherSel = GRID.querySelector(`select.seat-select[data-row="${other.row}"][data-col="${other.col}"]`);
-  return otherSel && otherSel.value==="wilson";
+  return otherSel?.value === "wilson";
 }
 
 /* ============================
@@ -411,7 +411,7 @@ function findAnyCard(id){
          null;
 }
 
-function isCobradorId(id){ return !!COBRADORES.find(x=>x.id===id); }
+function isCobradorId(id){ return COBRADORES.some(x=>x.id===id); }
 
 /* ============================
    REGRAS DE EMBARQUE POR POSIÇÃO
@@ -421,7 +421,7 @@ function hasCobradorElsewhere(state, pos){
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
     if(r===pos.row && c===pos.col) continue;
     const card = state.grid[r][c].card;
-    if(card && card.isCobrador) n++;
+    if(card?.isCobrador) n++;
   }
   return n>0;
 }
@@ -452,6 +452,7 @@ function checkCardAllowedAt(card, pos, state){
       const rq = card.require(ctx, pos);
       if(!rq.ok) return {ok:false, reason: rq.msg || "Exigência não atendida para embarcar."};
     }catch(e){
+      console.error("Exigência de embarque inválida:", e);
       return {ok:false, reason:"Exigência não atendida para embarcar."};
     }
   }
@@ -462,23 +463,23 @@ function checkCardAllowedAt(card, pos, state){
 /* ============================
    CONTEXTO (cartas ativas)
 ============================= */
+function neighbors(pos){
+  const out=[];
+  if(pos.col-1>=0) out.push({row:pos.row,col:pos.col-1});
+  if(pos.col+1<COLS) out.push({row:pos.row,col:pos.col+1});
+  const other = pos.row===0?1:0;
+  for(let dc=-1; dc<=1; dc++){
+    const cc = pos.col+dc;
+    if(cc>=0 && cc<COLS) out.push({row:other,col:cc});
+  }
+  return out;
+}
+
 function buildCtx(state){
   const warnings = [];
   const memo = new Map();
   const key = (r,c)=> `${r},${c}`;
   const getPos = (r,c)=> state.grid[r][c];
-
-  function neighbors(pos){
-    const out=[];
-    if(pos.col-1>=0) out.push({row:pos.row,col:pos.col-1});
-    if(pos.col+1<COLS) out.push({row:pos.row,col:pos.col+1});
-    const other = pos.row===0?1:0;
-    for(let dc=-1; dc<=1; dc++){
-      const cc = pos.col+dc;
-      if(cc>=0 && cc<COLS) out.push({row:other,col:cc});
-    }
-    return out;
-  }
 
   function isActiveAt(pos){
     const k = key(pos.row,pos.col);
@@ -559,13 +560,13 @@ function buildCtx(state){
 }
 
 function collectState(){
-  const grid = [...Array(ROWS)].map(()=>[...Array(COLS)].map(()=>({card:null})));
+  const grid = Array.from({length:ROWS}, ()=>Array.from({length:COLS}, ()=>({card:null})));
   GRID.querySelectorAll("select.seat-select").forEach(sel=>{
     const id = sel.value; const r=+sel.dataset.row, c=+sel.dataset.col;
     grid[r][c].card = id ? findAnyCard(id) : null;
   });
   const d = DRIVERS.find(x=>x.id===DRIVER_SEL.value);
-  const driver = d && d.id ? d : null;
+  const driver = d?.id ? d : null;
   const improvements = getImprovements();
   const perrengues = getPerrengues();
   const rotasDiarias = getRotasDiarias();
@@ -598,7 +599,7 @@ function updateBusVisualLabels(state){
     const {row,col} = seatNumToRC(n);
     const card = state.grid[row][col].card;
     const label = card ? `${n} — ${card.nome}` : `${n} — Vazio`;
-    el.setAttribute("data-label", label);
+    el.dataset.label = label;
     el.setAttribute("aria-current", currentBusFocus===n ? "true" : "false");
     el.classList.toggle("occ", !!card);
   });
@@ -673,7 +674,7 @@ function calculateMateusBonus(state) {
     });
   }
 
-  if (!state.grid.flat().some(cell => cell.card && cell.card.id === 'dona_fausta')) {
+  if (!state.grid.flat().some(cell => cell.card?.id === 'dona_fausta')) {
     state.improvements.forEach(imp => {
       imp.bonus.forEach(tag => {
         if (tag in tagPoints) tagPoints[tag]++;
@@ -704,6 +705,35 @@ function calculateMateusBonus(state) {
   return { score: totalBonus, chosenTags, breakdown: breakdown.join(' • ') };
 }
 
+function calcAcidentePontos(state, ctx) {
+  let pontos = 0;
+  let detalhe = "";
+  if (state.driver) {
+    const contagens = {};
+    state.driver.bonus.forEach(categoria => {
+      contagens[categoria] = ctx.countBus(c =>
+        !c.isCobrador &&
+        (c.faixa === categoria || c.temper === categoria || c.comp === categoria)
+      );
+    });
+
+    let categoriaMaior = "";
+    let maiorContagem = 0;
+    for (const [categoria, contagem] of Object.entries(contagens)) {
+      if (contagem > maiorContagem) {
+        maiorContagem = contagem;
+        categoriaMaior = categoria;
+      }
+    }
+
+    if (categoriaMaior) {
+      pontos = maiorContagem;
+      detalhe = `Dobrou a categoria ${categoriaMaior} do motorista: +${pontos}`;
+    }
+  }
+  return { pontos, detalhe };
+}
+
 function scorePerrengues(state, ctx, breakdown) {
   let total = 0;
 
@@ -712,29 +742,7 @@ function scorePerrengues(state, ctx, breakdown) {
     let detalhe = "";
 
     if (perr.id === "acidente") {
-      if (state.driver) {
-        const contagens = {};
-        state.driver.bonus.forEach(categoria => {
-          contagens[categoria] = ctx.countBus(c =>
-            !c.isCobrador &&
-            (c.faixa === categoria || c.temper === categoria || c.comp === categoria)
-          );
-        });
-
-        let categoriaMaior = "";
-        let maiorContagem = 0;
-        for (const [categoria, contagem] of Object.entries(contagens)) {
-          if (contagem > maiorContagem) {
-            maiorContagem = contagem;
-            categoriaMaior = categoria;
-          }
-        }
-
-        if (categoriaMaior) {
-          pontos = maiorContagem;
-          detalhe = `Dobrou a categoria ${categoriaMaior} do motorista: +${pontos}`;
-        }
-      }
+      ({ pontos, detalhe } = calcAcidentePontos(state, ctx));
     } else {
       const count = ctx.countBus(c =>
         !c.isCobrador &&
@@ -768,23 +776,11 @@ function scoreRotasDiarias(state, ctx, breakdown) {
   return {score: total};
 }
 
-function apaixonadosBonus(state, ctx){
-  if(!EXP_APX.checked) return {score:0, parts:[]};
-
-  const nodes = [];
-  ctx.forEachCard((pos, card)=>{
-    if(card.isApaixonado){ nodes.push({pos, card}); }
-  });
-  if(nodes.length<2) return {score:0, parts:[]};
-
+function collectApaixonadoGroups(nodes, state, ctx){
   const visited = new Set();
   const groups = [];
   const key = (p)=> `${p.row},${p.col}`;
-
-  const isApxAt = (p)=> {
-    const cell = state.grid[p.row][p.col];
-    return cell && cell.card && cell.card.isApaixonado;
-  };
+  const isApxAt = (p)=> state.grid[p.row][p.col]?.card?.isApaixonado;
 
   for(const n of nodes){
     const k = key(n.pos);
@@ -802,6 +798,19 @@ function apaixonadosBonus(state, ctx){
     }
     groups.push(group);
   }
+  return groups;
+}
+
+function apaixonadosBonus(state, ctx){
+  if(!EXP_APX.checked) return {score:0, parts:[]};
+
+  const nodes = [];
+  ctx.forEachCard((pos, card)=>{
+    if(card.isApaixonado){ nodes.push({pos, card}); }
+  });
+  if(nodes.length<2) return {score:0, parts:[]};
+
+  const groups = collectApaixonadoGroups(nodes, state, ctx);
 
   let totalBonus=0; const parts=[]; let idx=1;
   for(const g of groups){
@@ -837,22 +846,103 @@ function grupoPagodeBonus(state, ctx){
 /* ============================
    RENDER / DETALHES
 ============================= */
+function getCardLabel(card){
+  if(card.isCobrador) return "Habilidade";
+  if(card.isApaixonado) return "Apaixonado";
+  if(card.impacto.includes("durante") && card.text && /Ao embarcar/i.test(card.text)) return "Condição";
+  if(card.require && !card.ability && !card.penalty) return "Exigência";
+  if(card.scoreReq && !card.ability && !card.penalty) return "Condição de pontuação";
+  if(card.penalty && !card.ability) return "Penalidade";
+  if(card.ability) return "Habilidade";
+  return "Efeito";
+}
+
 function cardStaticInfo(card){
   let attrs;
   if(card.isCobrador) attrs = "[Cobrador]";
   else if(card.isApaixonado) attrs = "[Apaixonado]";
   else attrs = `${card.faixa}, ${card.temper}, ${card.comp}.`;
   const pts = `${card.base} ponto${card.base===1?"":"s"}.`;
-  let label = "Efeito";
-  if(card.isCobrador) label="Habilidade";
-  else if(card.isApaixonado) label = "Apaixonado";
-  else if(card.impacto.includes("durante") && card.text && /Ao embarcar/i.test(card.text)) label = "Condição";
-  else if(card.require && !card.ability && !card.penalty) label = "Exigência";
-  else if(card.scoreReq && !card.ability && !card.penalty) label = "Condição de pontuação";
-  else if(card.penalty && !card.ability) label = "Penalidade";
-  else if(card.ability) label = "Habilidade";
+  const label = getCardLabel(card);
   const textLine = card.text ? `\n${label}: ${card.text}` : "";
   return `${attrs} ${pts}${textLine}`;
+}
+
+function renderInactiveCardRow(card, pos, ctx){
+  const rq = card.require(ctx, pos) || {ok:false, msg:"Exigência não atendida."};
+  const msg = `<span class="req-badge">Exigência não atendida</span> <span class="req-text">${rq.msg || ""}</span>\n${cardStaticInfo(card)}`;
+  return rowLine(`Assento ${seatNumber(pos)} — ${card.nome}`, 0, msg, seatNumber(pos), "req");
+}
+
+function renderMateusCardRow(card, pos, state){
+  const mateusBonus = calculateMateusBonus(state);
+  const totalMateus = card.base + mateusBonus.score;
+  let detail = cardStaticInfo(card);
+  if(mateusBonus.score > 0){
+    detail += `\nBônus Coringa: +${mateusBonus.score}. Tags escolhidas: ${mateusBonus.breakdown}.`;
+  }else{
+    detail += `\nBônus Coringa: +0. <span class="req-text">Selecione um motorista ou melhorias para calcular o bônus ideal.</span>`;
+  }
+  return {row: rowLine(`Assento ${seatNumber(pos)} — ${card.nome}`, totalMateus, detail, seatNumber(pos)), score: totalMateus};
+}
+
+function renderRegularCardRow(card, pos, ctx){
+  let s = card.base; const notes = []; const log = (t)=> notes.push(t);
+  notes.push(cardStaticInfo(card));
+  if(card.ability) s += (card.ability(pos,ctx,log) || 0);
+  if(card.penalty) s += (card.penalty(pos,ctx,log) || 0);
+  let extraCls = "";
+  if(typeof card.scoreReq === "function"){
+    const sr = card.scoreReq(ctx,pos);
+    if(!sr.ok){
+      notes.push(`<span class="noscore-badge">Sem pontuação</span> <span class="req-text">${sr.msg||""}</span>\n(Continua contando para motorista, melhorias e adjacências)`);
+      s = 0; extraCls = "sc";
+    }
+  }
+  if(card.note && card.impacto.includes("durante")) notes.push(`Nota: ${card.note}`);
+  return {row: rowLine(`Assento ${seatNumber(pos)} — ${card.nome}`, s, notes.join("\n"), seatNumber(pos), extraCls), score: s};
+}
+
+function scorePassengers(state, ctx, isActiveAt){
+  const rows=[]; let passengersScore=0;
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const card = state.grid[r][c].card;
+      if(!card) continue;
+      const pos = {row:r,col:c};
+      if(!isActiveAt(pos) && typeof card.require==="function"){
+        rows.push(renderInactiveCardRow(card, pos, ctx));
+        continue;
+      }
+      if(card.id === 'mateus'){
+        const {row, score} = renderMateusCardRow(card, pos, state);
+        rows.push(row); passengersScore += score;
+        continue;
+      }
+      const {row, score} = renderRegularCardRow(card, pos, ctx);
+      rows.push(row); passengersScore += score;
+    }
+  }
+  return {rows, passengersScore};
+}
+
+function calcHandPenalty(ctx, state){
+  const hasIsabel = ctx.existsId("isabel");
+  const hasEdio = ctx.existsId("edio");
+  let handPenalty = 0;
+  let handDetail = "";
+
+  if (hasIsabel && hasEdio) {
+    handPenalty = state.hand || 0;
+    handDetail = `${handPenalty} (+1 por ${handPenalty} carta(s) na mão, pois Édio e Isabel estão juntos)`;
+  } else if (hasIsabel) {
+    handDetail = "0 (Isabel presente)";
+  } else {
+    handPenalty = -(state.hand || 0);
+    handDetail = handPenalty ? `${handPenalty} (–1 por ${Math.abs(handPenalty)} carta(s) na mão)` : "0";
+  }
+
+  return {hasIsabel, hasEdio, handPenalty, handDetail};
 }
 
 function render(){
@@ -860,55 +950,7 @@ function render(){
   const {ctx, warnings, isActiveAt} = buildCtx(state);
   updateBusVisualLabels(state);
 
-  const rows=[]; let passengersScore=0;
-
-  for(let r=0;r<ROWS;r++){
-    for(let c=0;c<COLS;c++){
-      const card = state.grid[r][c].card;
-      if(!card) continue;
-      const pos = {row:r,col:c};
-
-      if(!isActiveAt(pos) && typeof card.require==="function"){
-        const rq = card.require(ctx,pos) || {ok:false,msg:"Exigência não atendida."};
-        const msg = `<span class="req-badge">Exigência não atendida</span> <span class="req-text">${rq.msg || ""}</span>\n${cardStaticInfo(card)}`;
-        rows.push(rowLine(`Assento ${seatNumber(pos)} — ${card.nome}`, 0, msg, seatNumber(pos), "req"));
-        continue;
-      }
-
-      if (card.id === 'mateus') {
-        const mateusBonus = calculateMateusBonus(state);
-        const totalMateus = card.base + mateusBonus.score;
-        passengersScore += totalMateus;
-
-        let detail = cardStaticInfo(card);
-        if (mateusBonus.score > 0) {
-          detail += `\nBônus Coringa: +${mateusBonus.score}. Tags escolhidas: ${mateusBonus.breakdown}.`;
-        } else {
-          detail += `\nBônus Coringa: +0. <span class="req-text">Selecione um motorista ou melhorias para calcular o bônus ideal.</span>`;
-        }
-        rows.push(rowLine(`Assento ${seatNumber(pos)} — ${card.nome}`, totalMateus, detail, seatNumber(pos)));
-        continue;
-      }
-
-      let s = card.base; const notes = []; const log = (t)=> notes.push(t);
-      notes.push(cardStaticInfo(card));
-      if(card.ability) s += (card.ability(pos,ctx,log) || 0);
-      if(card.penalty) s += (card.penalty(pos,ctx,log) || 0);
-
-      let extraCls = "";
-      if(typeof card.scoreReq === "function"){
-        const sr = card.scoreReq(ctx,pos);
-        if(!sr.ok){
-          notes.push(`<span class="noscore-badge">Sem pontuação</span> <span class="req-text">${sr.msg||""}</span>\n(Continua contando para motorista, melhorias e adjacências)`);
-          s = 0; extraCls = "sc";
-        }
-      }
-      if(card.note && card.impacto.includes("durante")) notes.push(`Nota: ${card.note}`);
-
-      rows.push(rowLine(`Assento ${seatNumber(pos)} — ${card.nome}`, s, notes.join("\n"), seatNumber(pos), extraCls));
-      passengersScore += s;
-    }
-  }
+  const {rows, passengersScore} = scorePassengers(state, ctx, isActiveAt);
 
   const driverPts = scoreDriver(state, ctx);
   const improvBreak=[]; const {score:improvPts, note:improvNote} = scoreImprovements(state, ctx, improvBreak);
@@ -922,21 +964,7 @@ function render(){
   const apx = apaixonadosBonus(state, ctx);
   const pagodeBonus = grupoPagodeBonus(state, ctx);
 
-  const hasIsabel = ctx.existsId("isabel");
-  const hasEdio = ctx.existsId("edio");
-  let handPenalty = 0;
-  let handDetail = "";
-
-  if (hasIsabel && hasEdio) {
-    handPenalty = state.hand || 0;
-    handDetail = `${handPenalty} (+1 por ${handPenalty} carta(s) na mão, pois Édio e Isabel estão juntos)`;
-  } else if (hasIsabel) {
-    handPenalty = 0;
-    handDetail = "0 (Isabel presente)";
-  } else {
-    handPenalty = -(state.hand || 0);
-    handDetail = handPenalty ? `${handPenalty} (–1 por ${Math.abs(handPenalty)} carta(s) na mão)` : "0";
-  }
+  const {hasIsabel, hasEdio, handPenalty, handDetail} = calcHandPenalty(ctx, state);
 
   sumPassengersEl.textContent = passengersScore;
   sumDriverEl.textContent = driverPts;
@@ -985,7 +1013,8 @@ function scoreSpan(score){
 }
 
 function rowLine(name,score,detail,seatId, extraCls=""){
-  return `<div class="row ${extraCls}" ${seatId?`id="exp-seat-${seatId}"`:``}>
+  const idAttr = seatId ? `id="exp-seat-${seatId}"` : "";
+  return `<div class="row ${extraCls}" ${idAttr}>
     <div class="h"><div class="name">${name}</div><div class="score">${scoreSpan(score)}</div></div>
     ${detail?`<div class="d">${detail}</div>`:""}
   </div>`;
@@ -1047,27 +1076,62 @@ const BADGE_LABELS = {
 
 const catalogContentEl = document.getElementById("catalogContent");
 const catalogSearchEl = document.getElementById("catalogSearch");
-document.getElementById("clearCatalogSearch").onclick = ()=>{ catalogSearchEl.value = ""; buildCatalog(""); };
-catalogSearchEl?.addEventListener("input", ()=> buildCatalog(catalogSearchEl.value));
 
-function norm(s){ return String(s||"").normalize("NFD").replace(/\p{Diacritic}/gu,"").toLowerCase(); }
+const catalogFilters = { faixa: null, temper: null, comp: null, expansao: null };
+
+function refreshCatalog(){ buildCatalog(catalogSearchEl.value); }
+
+document.getElementById("clearCatalogSearch").onclick = ()=>{
+  catalogSearchEl.value = "";
+  catalogFilters.faixa = null; catalogFilters.temper = null;
+  catalogFilters.comp = null; catalogFilters.expansao = null;
+  document.querySelectorAll(".cat-filter-btn.act").forEach(b=>b.classList.remove("act"));
+  buildCatalog("");
+};
+catalogSearchEl?.addEventListener("input", refreshCatalog);
+
+document.querySelectorAll(".cat-filter-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    const f = btn.dataset.filter, v = btn.dataset.value;
+    if(catalogFilters[f] === v){
+      catalogFilters[f] = null;
+      btn.classList.remove("act");
+    } else {
+      document.querySelectorAll(`.cat-filter-btn[data-filter="${f}"]`).forEach(b=>b.classList.remove("act"));
+      catalogFilters[f] = v;
+      btn.classList.add("act");
+    }
+    refreshCatalog();
+  });
+});
+
+function norm(s){ return String(s||"").normalize("NFD").replaceAll(/\p{Diacritic}/gu,"").toLowerCase(); }
 
 function cardMatchesFilter(card, q){
-  if(!q) return true;
-  const nq = norm(q);
-  const hay = [
-    card.nome,
-    card.faixa, card.temper, card.comp,
-    card.text || "", card.note || "",
-    card.isCobrador ? "cobrador" : card.isApaixonado ? "apaixonado" : "passageiro"
-  ].join(" ");
-  return norm(hay).includes(nq);
+  if(q){
+    const nq = norm(q);
+    let tipo;
+    if(card.isCobrador) tipo = "cobrador";
+    else if(card.isApaixonado) tipo = "apaixonado";
+    else tipo = "passageiro";
+    const hay = [card.nome, card.faixa, card.temper, card.comp, card.text||"", card.note||"", tipo].join(" ");
+    if(!norm(hay).includes(nq)) return false;
+  }
+  if(catalogFilters.faixa && card.faixa !== catalogFilters.faixa) return false;
+  if(catalogFilters.temper && card.temper !== catalogFilters.temper) return false;
+  if(catalogFilters.comp && card.comp !== catalogFilters.comp) return false;
+  return true;
 }
 
 function buildCatalog(q){
+  const tagFilterActive = catalogFilters.faixa || catalogFilters.temper || catalogFilters.comp;
+  const expFilter = catalogFilters.expansao;
+
   const groups = [
     {
       title: "Motoristas",
+      expansaoId: "motoristas",
+      hasTagAttrs: false,
       items: DRIVERS.filter(d => d.id),
       render: d => ({
         name: d.nome,
@@ -1079,6 +1143,8 @@ function buildCatalog(q){
     },
     {
       title: "Melhorias",
+      expansaoId: "melhorias",
+      hasTagAttrs: false,
       items: IMPROVEMENTS,
       render: i => ({
         name: i.nome,
@@ -1090,6 +1156,8 @@ function buildCatalog(q){
     },
     {
       title: "Perrengues (expansão)",
+      expansaoId: "perrengues",
+      hasTagAttrs: false,
       items: PERRENGUES.filter(p => cardMatchesFilter(p, q)),
       render: p => ({
         name: p.nome,
@@ -1101,6 +1169,8 @@ function buildCatalog(q){
     },
     {
       title: "Rotas Diárias (expansão)",
+      expansaoId: "rotasdiarias",
+      hasTagAttrs: false,
       items: ROTAS_DIARIAS.filter(r => cardMatchesFilter(r, q)),
       render: r => ({
         name: r.nome,
@@ -1112,6 +1182,8 @@ function buildCatalog(q){
     },
     {
       title: "Passageiros",
+      expansaoId: "base",
+      hasTagAttrs: true,
       items: CARD_DB.filter(c => cardMatchesFilter(c, q)),
       render: c => ({
         name: c.nome,
@@ -1127,6 +1199,8 @@ function buildCatalog(q){
     },
     {
       title: "Cobradores (expansão)",
+      expansaoId: "cobradores",
+      hasTagAttrs: true,
       items: COBRADORES.filter(c => cardMatchesFilter(c, q)),
       render: c => ({
         name: c.nome,
@@ -1138,6 +1212,8 @@ function buildCatalog(q){
     },
     {
       title: "Apaixonados (expansão)",
+      expansaoId: "apaixonados",
+      hasTagAttrs: true,
       items: APAIXONADOS.filter(a => cardMatchesFilter(a, q)),
       render: a => ({
         name: a.nome,
@@ -1149,6 +1225,8 @@ function buildCatalog(q){
     },
     {
       title: "Estou no Busão (expansão)",
+      expansaoId: "estounobusao",
+      hasTagAttrs: true,
       items: ESTOU_NO_BUSAO.filter(e => cardMatchesFilter(e, q)),
       render: e => ({
         name: e.nome,
@@ -1160,6 +1238,8 @@ function buildCatalog(q){
     },
     {
       title: "Lendas Urbanas (expansão)",
+      expansaoId: "lendas",
+      hasTagAttrs: true,
       items: LENDAS_URBANAS.filter(l => cardMatchesFilter(l, q)),
       render: l => ({
         name: l.nome,
@@ -1171,6 +1251,8 @@ function buildCatalog(q){
     },
     {
       title: "Grupo de Pagode (expansão)",
+      expansaoId: "pagode",
+      hasTagAttrs: true,
       items: GRUPO_PAGODE.filter(g => cardMatchesFilter(g, q)),
       render: g => ({
         name: g.nome,
@@ -1182,7 +1264,13 @@ function buildCatalog(q){
     }
   ];
 
-  const html = groups.map(g=>{
+  const visible = groups.filter(g => {
+    if(expFilter && g.expansaoId !== expFilter) return false;
+    if(tagFilterActive && !g.hasTagAttrs) return false;
+    return true;
+  });
+
+  const html = visible.map(g=>{
     const inner = g.items.map(it=>{
       const m = g.render(it);
       const badges = (m.badges||[]).map(b=>{
@@ -1195,9 +1283,9 @@ function buildCatalog(q){
         ${m.text?`<div class="cat-text">${m.text}</div>`:""}
       </div>`;
     }).join("");
-    return g.items.length > 0 ? `<div class="cat-group"><h3>${g.title}</h3>${inner}</div>` : '';
+    return g.items.length > 0 ? `<div class="cat-group"><h3>${g.title}</h3>${inner}</div>` : "";
   }).join("");
-  catalogContentEl.innerHTML = html;
+  catalogContentEl.innerHTML = html || `<div class="muted" style="padding:12px">Nenhuma carta encontrada para os filtros selecionados.</div>`;
 }
 
 /* ============================
@@ -1215,12 +1303,13 @@ let currentSeatNo = null;
 function openPickerForSeat(seatNo){
   currentSeatNo = seatNo;
   pickerSeatLabel.textContent = `Assento ${seatNo}`;
-  pickerModal.classList.add("open");
+  pickerModal.showModal();
   buildPickerGrid("pass", "");
   pickerSearch.value = "";
 }
 
-function closePicker(){ pickerModal.classList.remove("open"); currentSeatNo=null; }
+function closePicker(){ pickerModal.close(); currentSeatNo=null; }
+pickerModal.addEventListener("close", ()=>{ currentSeatNo=null; });
 
 pickerClose.onclick = closePicker;
 pickerClear.onclick = ()=>{

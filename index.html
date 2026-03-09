@@ -20,12 +20,12 @@
 
     <div class="tabview act" id="tab-config">
       <div class="section">
-        <label>Jogador</label>
+        <label for="playerName">Jogador</label>
         <input id="playerName" placeholder="Nome do jogador" />
       </div>
 
       <div class="section">
-        <label>Motorista</label>
+        <label for="driver">Motorista</label>
         <select id="driver"></select>
         <div id="driverInfo" class="drivers" style="margin-top:10px"></div>
         <div class="inline">
@@ -59,7 +59,7 @@
       </div>
 
       <div class="section">
-        <label>Melhorias do Busão (até 3, sem repetir)</label>
+        <span class="label">Melhorias do Busão (até 3, sem repetir)</span>
         <div id="improvButtons" class="bar" style="flex-wrap:wrap"></div>
         <div id="improvInfo" class="drivers" style="margin-top:10px"></div>
         <div class="chips" style="margin-top:8px">
@@ -69,19 +69,19 @@
       </div>
 
       <div class="section" id="perrenguesSection" style="display:none;">
-        <label>Perrengues (sem limite)</label>
+        <span class="label">Perrengues (sem limite)</span>
         <div id="perrenguesButtons" class="bar" style="flex-wrap:wrap"></div>
         <div id="perrenguesInfo" class="drivers" style="margin-top:10px"></div>
       </div>
 
       <div class="section" id="rotasDiariasSection" style="display:none;">
-        <label>Rotas Diárias (sem limite)</label>
+        <span class="label">Rotas Diárias (sem limite)</span>
         <div id="rotasDiariasButtons" class="bar" style="flex-wrap:wrap"></div>
         <div id="rotasDiariasInfo" class="drivers" style="margin-top:10px"></div>
       </div>
 
       <div class="section">
-        <label>Cartas na mão (–1 cada)</label>
+        <label for="handCount">Cartas na mão (–1 cada)</label>
         <input id="handCount" type="number" min="0" step="1" value="0" />
       </div>
     </div>
@@ -108,7 +108,7 @@
       <div class="section"><div class="chips"><span class="chip">Adjacências válidas – ortogonais e diagonais</span></div></div>
 
       <div class="section">
-        <label>Ações</label>
+        <span class="label">Ações</span>
         <div class="bar">
           <button class="btn acc" id="btnClearSeats">Limpar assentos</button>
           <button class="btn ghost" id="btnNewRound">Nova pontuação</button>
@@ -116,7 +116,7 @@
       </div>
 
       <div class="section">
-        <label>Salvar no Ranking</label>
+        <span class="label">Salvar no Ranking</span>
         <div class="bar" style="margin-bottom:8px">
           <button class="btn accent" id="btnSaveScore">Salvar pontuação</button>
           <button class="btn warn" id="btnResetRanking">Zerar ranking</button>
@@ -131,9 +131,45 @@
         <div class="catalog">
           <div class="cat-controls">
             <input id="catalogSearch" placeholder="Busque por nome, tag ou palavra do efeito (ex.: Jovem, Tranquilo, Wi-Fi...)" />
-            <button class="btn sm" id="clearCatalogSearch">Limpar</button>
-            <div class="chips">
-              <span class="chip">Dica: inclui Passageiros, Cobradores, Motoristas e Melhorias</span>
+            <button class="btn sm" id="clearCatalogSearch">Limpar filtros</button>
+            <div class="cat-filter-groups">
+              <div class="cat-filter-group">
+                <span class="cat-filter-label">Faixa</span>
+                <div class="cat-filter-btns">
+                  <button class="cat-filter-btn" data-filter="faixa" data-value="Jovem">Jovem</button>
+                  <button class="cat-filter-btn" data-filter="faixa" data-value="Adulto">Adulto</button>
+                  <button class="cat-filter-btn" data-filter="faixa" data-value="Idoso">Idoso</button>
+                </div>
+              </div>
+              <div class="cat-filter-group">
+                <span class="cat-filter-label">Temperamento</span>
+                <div class="cat-filter-btns">
+                  <button class="cat-filter-btn" data-filter="temper" data-value="Caótico">Caótico</button>
+                  <button class="cat-filter-btn" data-filter="temper" data-value="Tranquilo">Tranquilo</button>
+                  <button class="cat-filter-btn" data-filter="temper" data-value="Equilibrado">Equilibrado</button>
+                </div>
+              </div>
+              <div class="cat-filter-group">
+                <span class="cat-filter-label">Comportamento</span>
+                <div class="cat-filter-btns">
+                  <button class="cat-filter-btn" data-filter="comp" data-value="Barulhento">Barulhento</button>
+                  <button class="cat-filter-btn" data-filter="comp" data-value="Comunicativo">Comunicativo</button>
+                  <button class="cat-filter-btn" data-filter="comp" data-value="Silencioso">Silencioso</button>
+                </div>
+              </div>
+              <div class="cat-filter-group">
+                <span class="cat-filter-label">Expansão</span>
+                <div class="cat-filter-btns">
+                  <button class="cat-filter-btn" data-filter="expansao" data-value="base">Base</button>
+                  <button class="cat-filter-btn" data-filter="expansao" data-value="cobradores">Cobradores</button>
+                  <button class="cat-filter-btn" data-filter="expansao" data-value="apaixonados">Apaixonados</button>
+                  <button class="cat-filter-btn" data-filter="expansao" data-value="estounobusao">Estou no Busão</button>
+                  <button class="cat-filter-btn" data-filter="expansao" data-value="lendas">Lendas Urbanas</button>
+                  <button class="cat-filter-btn" data-filter="expansao" data-value="pagode">Grupo de Pagode</button>
+                  <button class="cat-filter-btn" data-filter="expansao" data-value="perrengues">Perrengues</button>
+                  <button class="cat-filter-btn" data-filter="expansao" data-value="rotasdiarias">Rotas Diárias</button>
+                </div>
+              </div>
             </div>
           </div>
           <div id="catalogContent"></div>
@@ -209,9 +245,9 @@
         <div class="muted">Mão: <b id="sumHand">0</b></div>
       </div>
     </div>
-    <div class="section" style="padding-top:8px"><label>Explicação por assento</label><div id="warnings" class="muted" style="margin-top:6px"></div><div id="explain" class="explain"></div></div>
+    <div class="section" style="padding-top:8px"><span class="label">Explicação por assento</span><div id="warnings" class="muted" style="margin-top:6px"></div><div id="explain" class="explain"></div></div>
     <div class="section">
-      <label>Ranking</label>
+      <span class="label">Ranking</span>
       <div class="table-wrap">
         <table id="rankTable"><thead><tr><th>#</th><th>Jogador</th><th>Motorista</th><th>Melhorias</th><th class="right">Pontuação</th></tr></thead><tbody></tbody></table>
       </div>
@@ -220,7 +256,7 @@
   </div>
 </div>
 
-<div id="pickerModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
+<dialog id="pickerModal" class="modal" aria-labelledby="pickerTitle">
   <div class="modal-card">
     <div class="modal-head">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -245,7 +281,7 @@
       <div id="pickerGrid" class="picker-grid"></div>
     </div>
   </div>
-</div>
+</dialog>
 
 <!-- script.js: dados do jogo (constantes, cartas, expansões) -->
 <script src="js/script.js"></script>
