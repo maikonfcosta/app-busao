@@ -112,6 +112,7 @@
         <div class="bar">
           <button class="btn acc" id="btnClearSeats">Limpar assentos</button>
           <button class="btn ghost" id="btnNewRound">Nova pontuação</button>
+          <button class="btn accent" id="btnOpenScanner" title="Abrir câmera para escanear carta">Abrir Scanner</button>
         </div>
       </div>
 
@@ -283,9 +284,441 @@
   </div>
 </dialog>
 
+<!-- ======= Scanner de Câmera ======= -->
+<dialog id="scannerOverlay" aria-label="Scanner de carta">
+  <div class="scanner-card">
+    <div class="scanner-header">
+      <span>Scanner de Carta</span>
+      <button class="btn ghost sm" id="btnCloseScanner" aria-label="Fechar scanner">Fechar</button>
+    </div>
+    <!--
+      #scanner-container: recebe o <video> e o canvas de overlay
+      criados dinamicamente pelo CameraHandler.
+    -->
+    <!-- ── Gate: Este ônibus possui Melhorias? ──────────────────── -->
+    <div id="improvGate" hidden>
+      <p class="improv-gate-q">Este ônibus possui <strong>Melhorias</strong>?</p>
+      <div class="improv-gate-btns">
+        <button id="improvGateNo"  class="btn ghost">Não</button>
+        <button id="improvGateYes" class="btn">Sim, possui</button>
+      </div>
+    </div>
+
+    <div id="orientationWarning" hidden aria-live="polite">
+      &#8635; Por favor, gire o celular para a horizontal para escanear.
+    </div>
+    <div id="scanner-container" hidden>
+      <!-- Miniatura P&B enviada ao Tesseract (debug de OCR) -->
+      <div id="debugOcrWrap" class="debug-ocr-wrap" hidden aria-hidden="true">
+        <span class="debug-ocr-lbl">OCR input</span>
+        <img id="debugOcrPreview" class="debug-ocr-img" alt="">
+      </div>
+    </div>
+    <div id="scannerWizardBar" hidden>
+      <div class="wizard-dots" id="wizardDots" aria-hidden="true"></div>
+      <div class="wizard-label" id="wizardLabel"></div>
+      <div class="wizard-hint"  id="wizardHint"></div>
+    </div>
+    <div id="scannerStatus" class="muted">Aguardando câmera…</div>
+    <div class="scanner-action-row">
+      <button id="scannerCaptureBtn" disabled>Escanear cartas</button>
+      <button id="finishScanBtn" class="btn-finish-scan" hidden>Finalizar e Calcular Pontos</button>
+    </div>
+
+    <!-- ── Preview de Captura ────────────────────────────────────── -->
+    <div id="capturePreview" hidden>
+      <div class="cp-photo-wrap">
+        <img id="cpPhoto" src="" alt="Recorte enviado ao OCR" class="cp-photo">
+      </div>
+      <p class="cp-step-label" id="cpStepLabel"></p>
+      <ul class="cp-found-list" id="cpFoundList" aria-live="polite"></ul>
+      <p class="cp-empty" id="cpEmpty" hidden>Nenhuma carta identificada. Tente reenquadrar.</p>
+      <div class="cp-actions">
+        <button id="cpRetryBtn"    class="btn ghost sm">Tentar Novamente</button>
+        <button id="cpNextBtn"     class="btn sm">Próximo ›</button>
+        <button id="cpMoreBtn"     class="btn ghost sm" hidden>Capturar Mais</button>
+        <button id="cpFinalizeBtn" class="btn sm"       hidden>Finalizar Ônibus 🚌</button>
+      </div>
+    </div>
+
+    <div id="scannerResults" hidden></div>
+  </div>
+</dialog>
+
+<!-- Toast de notificação do scanner -->
+<output id="scannerToast" class="scanner-toast" aria-live="polite" aria-atomic="true"></output>
+
 <!-- script.js: dados do jogo (constantes, cartas, expansões) -->
 <script src="js/script.js"></script>
+<!-- masterCardList.js: ALL_AVAILABLE_CARDS — agregado de todas as cartas com `type` -->
+<script src="src/vision/masterCardList.js"></script>
+<!-- stringMatcher.js: levenshteinDistance + findClosestCard (fuzzy match OCR) -->
+<script src="src/utils/stringMatcher.js"></script>
+<!-- GameLogic.js: cálculo de pontuação (sem DOM) -->
+<script src="js/GameLogic.js"></script>
 <!-- main.js: lógica, UI e interatividade -->
 <script src="js/main.js"></script>
+<!-- cardDefinitions.js: coordenadas de zona do playmat + matchCardsInZone() -->
+<script src="src/vision/cardDefinitions.js"></script>
+<!-- Tesseract.js: OCR para detecção de cartas via câmera -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<!-- CameraHandler.js: acesso à câmera + scanZonas() -->
+<script src="src/vision/CameraHandler.js"></script>
+<script>
+  (function () {
+    const overlay       = document.getElementById('scannerOverlay');
+    const container     = document.getElementById('scanner-container');
+    const toastEl       = document.getElementById('scannerToast');
+    const statusEl      = document.getElementById('scannerStatus');
+    const resultsEl     = document.getElementById('scannerResults');
+    const captureBtn    = document.getElementById('scannerCaptureBtn');
+    const finishScanBtn = document.getElementById('finishScanBtn');
+    const openBtn       = document.getElementById('btnOpenScanner');
+    const closeBtn      = document.getElementById('btnCloseScanner');
+    const orientWarning = document.getElementById('orientationWarning');
+    const wizardBar     = document.getElementById('scannerWizardBar');
+    const wizardDotsEl  = document.getElementById('wizardDots');
+    const wizardLabelEl = document.getElementById('wizardLabel');
+    const wizardHintEl  = document.getElementById('wizardHint');
+
+    // ── Gate de melhorias ───────────────────────────────────────────
+    const gateEl        = document.getElementById('improvGate');
+    const improvGateYes = document.getElementById('improvGateYes');
+    const improvGateNo  = document.getElementById('improvGateNo');
+
+    // ── Debug OCR preview ───────────────────────────────────────────
+    const debugOcrWrap    = document.getElementById('debugOcrWrap');
+    const debugOcrPreview = document.getElementById('debugOcrPreview');
+
+    // ── Preview de captura ──────────────────────────────────────────
+    const previewEl     = document.getElementById('capturePreview');
+    const cpPhoto       = document.getElementById('cpPhoto');
+    const cpStepLabel   = document.getElementById('cpStepLabel');
+    const cpFoundList   = document.getElementById('cpFoundList');
+    const cpEmpty       = document.getElementById('cpEmpty');
+    const cpRetryBtn    = document.getElementById('cpRetryBtn');
+    const cpNextBtn     = document.getElementById('cpNextBtn');
+    const cpMoreBtn     = document.getElementById('cpMoreBtn');
+    const cpFinalizeBtn = document.getElementById('cpFinalizeBtn');
+
+    let camera            = null;
+    let _capturedDataUrl  = '';
+    let _hasImprovements  = false;
+
+    // ── Orientação ──────────────────────────────────────────────────
+    function isLandscape() { return CameraHandler.isLandscape; }
+
+    function updateOrientationWarning() {
+      const portrait = !isLandscape();
+      orientWarning.hidden = !portrait;
+      captureBtn.disabled  = portrait || !camera || (camera.isWizardDone ?? false);
+    }
+
+    window.addEventListener('resize', updateOrientationWarning);
+
+    // ── Status ──────────────────────────────────────────────────────
+    function setStatus(msg, isError = false) {
+      statusEl.textContent = msg;
+      statusEl.style.color = isError ? 'var(--bad)' : 'var(--muted)';
+    }
+
+    // ── Wizard bar ──────────────────────────────────────────────────
+    function renderWizardBar() {
+      const steps = camera?.activeSteps ?? CameraHandler.SCAN_STEPS;
+      const idx   = camera?.wizardStepIndex ?? 0;
+      const done  = camera?.isWizardDone    ?? false;
+      const step  = done ? null : steps[idx];
+
+      wizardDotsEl.innerHTML = steps.map((_, i) => {
+        let cls = '';
+        if (i < idx)        cls = 'done';
+        else if (i === idx) cls = 'active';
+        return `<span class="wdot ${cls}"></span>`;
+      }).join('');
+
+      if (done) {
+        wizardLabelEl.textContent = '✓ Scan concluído!';
+        wizardHintEl.textContent  = 'Confirme os dados abaixo.';
+        captureBtn.textContent    = 'Escanear novamente';
+        captureBtn.disabled       = false;
+      } else if (step) {
+        wizardLabelEl.textContent = `${idx + 1}/${steps.length} — ${step.label.toUpperCase()}`;
+        wizardHintEl.textContent  = step.instruction;
+        captureBtn.textContent    = `Capturar ${step.label}`;
+        updateOrientationWarning();
+      }
+    }
+
+    // ── Flash de preview (1 s enquanto OCR processa) ─────────────
+    function showFlash(dataUrl) {
+      container.querySelector('.ocr-flash')?.remove();
+      const flash = document.createElement('div');
+      flash.className = 'ocr-flash';
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.className = 'ocr-flash-img';
+      flash.appendChild(img);
+      container.appendChild(flash);
+      setTimeout(() => flash.remove(), 1000);
+    }
+
+    // ── Toast de notificação ─────────────────────────────────────
+    const _STEP_META = {
+      rota:        { emoji: '📅', label: 'Rota Diária'  },
+      perrengue:   { emoji: '⚠️', label: 'Perrengue'    },
+      melhorias:   { emoji: '✨', label: 'Melhoria'      },
+      motorista:   { emoji: '🚌', label: 'Motorista'     },
+      passageiros: { emoji: '👤', label: 'Passageiro'    },
+    };
+
+    let _toastTimer = null;
+    function showToast(message, type = 'info') {
+      toastEl.textContent = message;
+      toastEl.className   = `scanner-toast scanner-toast--${type} show`;
+      clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3500);
+    }
+
+    function _showStepToast(stepId, found) {
+      const meta = _STEP_META[stepId] ?? { emoji: '📋', label: stepId };
+      if (!found || found.length === 0) {
+        showToast(`${meta.emoji} ${meta.label}: nenhuma carta identificada.`, 'warn');
+        return;
+      }
+      const names = found.slice(0, 2).map(f => f.nome).join(', ');
+      const extra = found.length > 2 ? ` +${found.length - 2}` : '';
+      showToast(`${meta.emoji} ${meta.label}: ${names}${extra} adicionado!`, 'success');
+    }
+
+    // ── Preview de captura (após OCR) ────────────────────────────
+    let _currentPreviewStepId = '';
+
+    function showCapturePreview(dataUrl, stepId, found, autoAdvance = false) {
+      _currentPreviewStepId = stepId;
+      const stepDef = (camera?.activeSteps ?? CameraHandler.SCAN_STEPS).find(s => s.id === stepId);
+      cpPhoto.src             = dataUrl;
+      cpStepLabel.textContent = stepDef ? stepDef.label.toUpperCase() : stepId;
+
+      cpFoundList.innerHTML = '';
+      if (found && found.length > 0) {
+        found.forEach((item, idx) => {
+          const id  = `cp-cb-${idx}`;
+          const li  = document.createElement('li');
+          li.className = 'cp-found-item';
+
+          const cb    = document.createElement('input');
+          cb.type     = 'checkbox';
+          cb.id       = id;
+          cb.name     = 'cpCard';
+          cb.value    = item.id;
+          cb.checked  = true;
+          cb.className = 'cp-found-cb';
+
+          const lbl   = document.createElement('label');
+          lbl.htmlFor = id;
+          lbl.textContent = `${item.nome} — ${Math.round(item.score * 100)}%`;
+          lbl.className   = 'cp-found-label';
+
+          li.append(cb, lbl);
+          cpFoundList.appendChild(li);
+        });
+        cpEmpty.hidden = true;
+      } else {
+        cpEmpty.hidden = false;
+      }
+
+      const isMultiCapture = stepId === 'passageiros' || stepId === 'melhorias';
+      cpNextBtn.hidden     = isMultiCapture;
+      cpMoreBtn.hidden     = !isMultiCapture;
+      cpFinalizeBtn.hidden = !isMultiCapture;
+      cpFinalizeBtn.textContent = stepId === 'melhorias' ? 'Finalizar Melhorias ✅' : 'Finalizar Ônibus 🚌';
+
+      captureBtn.hidden = true;
+      previewEl.hidden  = false;
+
+      _showStepToast(stepId, found);
+
+      // Apenas o motorista avança automaticamente (confiança ≥ 60%)
+      if (autoAdvance) {
+        setTimeout(() => { if (!previewEl.hidden) _advanceAfterConfirm(true); }, 1500);
+      }
+    }
+
+    function hideCapturePreview() {
+      previewEl.hidden  = true;
+      captureBtn.hidden = false;
+      updateOrientationWarning();  // gerencia captureBtn.disabled corretamente
+    }
+
+    /** Filtra o estado do step atual mantendo apenas as cartas cujos checkboxes estão marcados. */
+    function _applyCheckedSelection() {
+      const sid = _currentPreviewStepId;
+      if (!sid || !camera) return;
+      const checked = new Set(
+        [...cpFoundList.querySelectorAll('input[name="cpCard"]:checked')].map(cb => cb.value)
+      );
+      camera.filterStepFound(sid, item => checked.has(item.id));
+    }
+
+    function _advanceAfterConfirm(notifyIfContinuing) {
+      _applyCheckedSelection();
+      hideCapturePreview();
+      camera.advanceStep();
+      // onStepChange → renderWizardBar() | onWizardDone → showResults() (via callbacks)
+      if (notifyIfContinuing && !camera.isWizardDone) setStatus('Próxima etapa pronta.');
+    }
+
+    cpRetryBtn.addEventListener('click',    () => { hideCapturePreview(); setStatus('Tente enquadrar a carta novamente.'); });
+    cpNextBtn.addEventListener('click',     () => _advanceAfterConfirm(true));
+    cpMoreBtn.addEventListener('click',     () => {
+      _applyCheckedSelection();
+      const sid = camera.activeSteps[camera.wizardStepIndex]?.id;
+      hideCapturePreview();
+      setStatus(sid === 'melhorias' ? 'Capture a próxima Melhoria…' : 'Capture o próximo passageiro…');
+    });
+    cpFinalizeBtn.addEventListener('click', () => _advanceAfterConfirm(false));
+
+    // ── Resultados finais ────────────────────────────────────────
+    function showResults(gameState) {
+      processScanResult(gameState, resultsEl, () => {
+        closeScanner();
+        document.getElementById('leftPanel')?.scrollIntoView({ behavior: 'smooth' });
+      });
+    }
+
+    // ── Etapas do wizard filtradas pelas expansões e configuração ──
+    function _buildWizardSteps() {
+      const rotasOn      = document.getElementById('expRotasDiarias')?.checked;
+      const perrenguesOn = document.getElementById('expPerrengues')?.checked;
+      return CameraHandler.SCAN_STEPS.filter(s => {
+        if (s.id === 'rota'       && !rotasOn)          return false;
+        if (s.id === 'perrengue'  && !perrenguesOn)     return false;
+        if (s.id === 'melhorias'  && !_hasImprovements) return false;
+        return true;
+      });
+    }
+
+    // ── Abrir scanner: exibe o gate de Melhorias antes da câmera ──
+    function openScanner() {
+      overlay.showModal();
+      gateEl.hidden     = false;
+      container.hidden  = true;
+      captureBtn.hidden = true;
+      wizardBar.hidden  = true;
+      previewEl.hidden  = true;
+      resultsEl.hidden  = true;
+      setStatus('');
+    }
+
+    // ── Inicia a câmera após o gate ser respondido ────────────────
+    async function _startCamera() {
+      gateEl.hidden    = true;
+      container.hidden = false;
+      captureBtn.hidden = false;
+      setStatus('Iniciando câmera…');
+
+      camera = new CameraHandler();
+      camera.onPreviewCapture = (dataUrl) => {
+        _capturedDataUrl = dataUrl;
+        showFlash(dataUrl);
+      };
+      camera.onStepChange = (_stepId, _partial) => renderWizardBar();
+      camera.onWizardDone = (gameState) => {
+        renderWizardBar();
+        showResults(gameState);
+      };
+      camera.onDebugPreview = (url) => {
+        debugOcrPreview.src = url;
+        debugOcrWrap.hidden = false;
+      };
+      camera.gameConfig = { hasImprovements: _hasImprovements };
+
+      try {
+        const video = await camera.startCamera();
+        container.innerHTML = '';
+        container.appendChild(video);
+        container.appendChild(camera.canvasElement);
+        container.appendChild(camera.overlayCanvasElement);
+        container.appendChild(debugOcrWrap);   // reinsere após limpar innerHTML
+
+        camera.startWizard(_buildWizardSteps());
+        wizardBar.hidden    = false;
+        finishScanBtn.hidden = false;
+        renderWizardBar();
+        setStatus('Gire o celular e alinhe o tabuleiro antes de capturar.');
+        updateOrientationWarning();
+      } catch (err) {
+        setStatus(err.message, true);
+      }
+    }
+
+    improvGateYes.addEventListener('click', () => { _hasImprovements = true;  _startCamera(); });
+    improvGateNo.addEventListener('click',  () => { _hasImprovements = false; _startCamera(); });
+
+    function closeScanner() {
+      if (camera) { camera.stopCamera(); camera = null; }
+      window.removeEventListener('resize', updateOrientationWarning);
+      container.innerHTML    = '';
+      container.hidden       = true;
+      debugOcrWrap.hidden    = true;
+      gateEl.hidden          = true;
+      finishScanBtn.hidden   = true;
+      captureBtn.disabled    = true;
+      captureBtn.hidden      = false;
+      captureBtn.textContent = 'Escanear cartas';
+      resultsEl.hidden       = true;
+      wizardBar.hidden       = true;
+      orientWarning.hidden   = true;
+      previewEl.hidden       = true;
+      setStatus('Aguardando câmera…');
+      overlay.close();
+    }
+
+    // ── Botão Capturar ───────────────────────────────────────────
+    captureBtn.addEventListener('click', async () => {
+      if (!camera || !isLandscape()) return;
+
+      if (camera.isWizardDone) {
+        camera.startWizard(_buildWizardSteps());
+        resultsEl.hidden = true;
+        renderWizardBar();
+        return;
+      }
+
+      captureBtn.disabled = true;
+      const stepId        = camera.activeSteps[camera.wizardStepIndex]?.id;
+      const alreadyHas    = (camera.wizardGameState?.[stepId]?.found?.length ?? 0) > 0;
+      const merge         = (stepId === 'passageiros' || stepId === 'melhorias') && alreadyHas;
+
+      try {
+        const { confidence } = await camera.captureCurrentStep((msg) => setStatus(msg), { merge });
+        const result          = camera.wizardGameState?.[stepId] ?? { found: [] };
+        const autoAdvance     = confidence >= 60 && stepId === 'motorista' && result.found.length > 0;
+        showCapturePreview(_capturedDataUrl, stepId, result.found, autoAdvance);
+      } catch (err) {
+        setStatus(err.message, true);
+        captureBtn.disabled = false;
+      }
+    });
+
+    finishScanBtn.addEventListener('click', () => {
+      hideCapturePreview();
+      const gameState = camera?.wizardGameState ?? {};
+      if (camera) { camera.stopCamera(); camera = null; }
+      finishScanBtn.hidden = true;
+      captureBtn.hidden    = true;
+      wizardBar.hidden     = true;
+      container.hidden     = true;
+      showResults(gameState);
+    });
+
+    openBtn.addEventListener('click',  openScanner);
+    closeBtn.addEventListener('click', closeScanner);
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeScanner();
+    });
+  })();
+</script>
 </body>
 </html>
