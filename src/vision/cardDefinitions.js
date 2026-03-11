@@ -165,11 +165,13 @@ function _levenshtein(a, b) {
 }
 
 /**
- * Palavras muito comuns nos textos de efeito das cartas de passageiro.
- * Excluídas do matching para evitar falsos positivos cruzados:
- * "busao" aparece na maioria dos textos de efeito e não distingue nenhum passageiro.
+ * Palavras excluídas do matching de passageiros para evitar falsos positivos
+ * causados por textos de efeito que citam outras cartas pelo apelido:
+ * • "busao"  — aparece em quase todos os efeitos ("se X estiver no Busão")
+ * • "grandao" — citado literalmente no efeito de O Maromba, causando falso match de Fabão
+ *              quando Fabão não está em jogo. Fabão ainda é detectável pelo seu nome "fabao".
  */
-const _PASSAGEIRO_STOPWORDS = new Set(['busao']);
+const _PASSAGEIRO_STOPWORDS = new Set(['busao', 'grandao']);
 
 /**
  * Pontuação de 0–1: fração de tokens de `normalizedStr` encontrados em `haystack`.
@@ -339,10 +341,13 @@ function matchCardsInZone(ocrText, zone, hints = {}) {
   const THRESHOLDS = { passageiros: 0.7, melhorias: 0.55, rota: 0.55, perrengue: 0.55 };
   const THRESHOLD  = THRESHOLDS[zone] ?? 0.4;
 
-  // Passageiros: compara só pelo apelido (dentro dos parênteses) para evitar que o
-  // texto de efeito de uma carta mencione o nome de outra e gere falso positivo.
-  // Usa stopwords para excluir tokens ultra-genéricos como "busao".
-  const nickOnly  = zone === 'passageiros';
+  // Passageiros: usa matching de 3 vias (nome completo, só nome, só apelido) com stopwords
+  // para excluir tokens genéricos que aparecem nos textos de efeito de outras cartas.
+  // Exemplo: "grandao" é citado no efeito de O Maromba ("se 'O Grandão' estiver no Busão"),
+  // então bloquear "grandao" evita falso positivo de Fabão — mas Fabão ainda detecta via
+  // seu nome real "fabao". O matching NÃO é nickOnly: o score máximo entre as 3 vias
+  // garante que qualquer texto visível (nome real OU apelido) identifique a carta.
+  const nickOnly  = false;
   const stopwords = zone === 'passageiros' ? _PASSAGEIRO_STOPWORDS : null;
 
   // Pontuação base: toma o maior entre nome principal e altNome (manchete da carta física)

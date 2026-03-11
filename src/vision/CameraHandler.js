@@ -911,11 +911,14 @@ class CameraHandler {
    * @param {function(string):void} report
    */
   async _slidingWindowOcr(dataUrl, worker, zone, report) {
+    // Quadrantes com 20% de sobreposição vertical para evitar que banners de nome
+    // próximos a y≈50% (ex: "O CLAUSTROFÓBICO") sejam cortados ao meio — o que
+    // quebraria palavras longas em fragmentos que não passam pelo matching.
     const quadrants = [
-      { x: 0,   y: 0,   w: 0.5, h: 0.5 },   // Q1 topo-esquerda
-      { x: 0.5, y: 0,   w: 0.5, h: 0.5 },   // Q2 topo-direita
-      { x: 0,   y: 0.5, w: 0.5, h: 0.5 },   // Q3 base-esquerda
-      { x: 0.5, y: 0.5, w: 0.5, h: 0.5 },   // Q4 base-direita
+      { x: 0,   y: 0,   w: 0.5, h: 0.6 },   // Q1 topo-esquerda  (y: 0–60%)
+      { x: 0.5, y: 0,   w: 0.5, h: 0.6 },   // Q2 topo-direita   (y: 0–60%)
+      { x: 0,   y: 0.4, w: 0.5, h: 0.6 },   // Q3 base-esquerda  (y: 40–100%)
+      { x: 0.5, y: 0.4, w: 0.5, h: 0.6 },   // Q4 base-direita   (y: 40–100%)
     ];
 
     let combinedText = '';

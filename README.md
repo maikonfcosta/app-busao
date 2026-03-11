@@ -35,6 +35,20 @@ Com esta aplicação, os jogadores podem focar na estratégia e na diversão, de
 - **Regras & FAQ:** Resumo das regras e perguntas frequentes integrados na interface.
 - **Ranking:** Acompanhe a classificação salva no navegador (localStorage).
 
+### Modo Scanner (OCR)
+
+O **Modo Scanner** permite digitalizar as cartas do seu ônibus diretamente pela câmera do dispositivo, preenchendo a configuração automaticamente sem digitar nada.
+
+- **Wizard passo a passo:** guia o jogador por cada etapa (Rota Diária → Perrengue → Melhorias → Motorista → Passageiros).
+- **Reconhecimento por câmera:** usa Tesseract.js para OCR em tempo real diretamente no navegador, sem envio de dados a servidores.
+- **Confirmação com checkboxes:** exibe as cartas identificadas com caixas de seleção para que o jogador confirme ou descarte resultados antes de avançar.
+- **Captura múltipla:** nas etapas de Melhorias e Passageiros, é possível capturar várias cartas em sequência antes de finalizar a etapa.
+- **Matching inteligente:**
+  - Correspondência por nome, apelido e nome alternativo (manchete física da carta).
+  - Stopwords de jogo (ex: "busão", "grandão") evitam falsos positivos causados por textos de efeito que citam outras cartas.
+  - Quadrantes sobrepostos na leitura do frame evitam corte de palavras longas na borda dos quadrantes.
+  - Matching fuzzy via distância de Levenshtein como fallback para OCR imperfeito.
+
 ## Como Usar
 
 1. **Configure o Ônibus:** Na aba "Configuração", escolha o motorista e as melhorias utilizadas. Ative as expansões desejadas.
@@ -44,16 +58,32 @@ Com esta aplicação, os jogadores podem focar na estratégia e na diversão, de
 5. **Salve no Ranking:** Clique em "Salvar pontuação" para registrar o resultado.
 6. Repita para os outros jogadores e veja quem foi o grande vencedor!
 
+### Usando o Modo Scanner
+
+1. Clique em **"Escanear Ônibus"** na aba Configuração.
+2. Conceda permissão de câmera quando solicitado.
+3. Siga o wizard: aponte a câmera para cada carta conforme indicado e clique em **Capturar**.
+4. Confirme os resultados exibidos (desmarque eventuais falsos positivos) e avance.
+5. Ao final, o ônibus é preenchido automaticamente com as cartas reconhecidas.
+
 ## Estrutura do Projeto
 
 ```
 app-busao/
-├── index.html          # Estrutura HTML da aplicação
+├── index.html               # Estrutura HTML e lógica do scanner (UI, wizard, callbacks)
 ├── css/
-│   └── style.css       # Estilos da interface
+│   └── style.css            # Estilos da interface
 ├── js/
-│   ├── script.js       # Dados do jogo: motoristas, melhorias, cartas e expansões
-│   └── main.js         # Lógica, UI, cálculo de pontuação e interatividade
+│   ├── script.js            # Dados do jogo: motoristas, melhorias, cartas e expansões
+│   ├── main.js              # Lógica, UI, cálculo de pontuação e interatividade
+│   └── GameLogic.js         # Motor de regras: validação de embarque e cálculo de pontos
+├── src/
+│   ├── vision/
+│   │   ├── CameraHandler.js     # Acesso à câmera, wizard de scan e OCR por etapa
+│   │   ├── cardDefinitions.js   # Coordenadas do playmat, zonas de foco e matching OCR
+│   │   └── masterCardList.js    # Lista unificada de todas as cartas (usada pelo fuzzy matcher)
+│   └── utils/
+│       └── stringMatcher.js     # Matching fuzzy via Levenshtein + janela deslizante
 ├── documentos/
 │   ├── Manual 5.0 reduzido.pdf
 │   └── Listas de cartas com efeitos e pontuação.pdf
@@ -63,9 +93,9 @@ app-busao/
 
 ## Tecnologias Utilizadas
 
-- **HTML5:** Para a estrutura da página.
-- **CSS3:** Estilos customizados com variáveis CSS e design responsivo.
-- **JavaScript (ES6+):** Para toda a lógica do jogo, manipulação de regras e interatividade.
+- **HTML5 / CSS3 / JavaScript (ES6+):** Estrutura, estilos e toda a lógica do jogo.
+- **Tesseract.js:** OCR no navegador para o Modo Scanner — nenhum dado é enviado a servidores externos.
+- **localStorage:** Persistência do ranking local.
 
 ## Como Contribuir
 
