@@ -620,360 +620,55 @@ function focusGridSeat(n, fromBus=false){
 }
 
 /* ============================
-   PONTUAÇÃO
-============================= */
-function scoreDriver(state, ctx){
-  if(!state.driver) return 0;
-  const b = state.driver.bonus;
-  let n=0;
-
-  b.forEach(tag => {
-    ctx.forEachCard((_p,c)=>{
-      if(c.isCobrador || c.id === 'mateus') return;
-      if(c.faixa === tag || c.temper === tag || c.comp === tag) n++;
-    });
-  });
-
-  if(ctx.existsId("vovo_michel")) {
-    n *= 2;
-  }
-
-  return n;
-}
-
-function scoreImprovements(state, ctx, breakdown){
-  if(ctx.existsId("dona_fausta")) return {score:0, note:"Dona Fausta presente: melhorias não pontuam."};
-  let s=0;
-  state.improvements.forEach(imp=>{
-    let k=0;
-    imp.bonus.forEach(tag => {
-      ctx.forEachCard((_p,c)=>{
-        if(c.isCobrador || c.id === 'mateus') return;
-        if(c.faixa === tag || c.temper === tag || c.comp === tag) k++;
-      });
-    });
-    breakdown.push({who:`[Melhoria] ${imp.nome}`, delta:+k, detail:`+${k} por correspondências no busão (somente cartas ativas)`});
-    s+=k;
-  });
-  return {score:s};
-}
-
-function calculateMateusBonus(state) {
-  const TAG_CATEGORIES = {
-    faixa: ['Idoso', 'Adulto', 'Jovem'],
-    temper: ['Caótico', 'Equilibrado', 'Tranquilo'],
-    comp: ['Barulhento', 'Comunicativo', 'Silencioso']
-  };
-
-  const allTags = Object.values(TAG_CATEGORIES).flat();
-  const tagPoints = Object.fromEntries(allTags.map(tag => [tag, 0]));
-
-  if (state.driver) {
-    state.driver.bonus.forEach(tag => {
-      if (tag in tagPoints) tagPoints[tag]++;
-    });
-  }
-
-  if (!state.grid.flat().some(cell => cell.card?.id === 'dona_fausta')) {
-    state.improvements.forEach(imp => {
-      imp.bonus.forEach(tag => {
-        if (tag in tagPoints) tagPoints[tag]++;
-      });
-    });
-  }
-
-  let totalBonus = 0;
-  const chosenTags = [];
-  const breakdown = [];
-
-  for (const tags of Object.values(TAG_CATEGORIES)) {
-    let bestTag = tags[0];
-    let maxPoints = 0;
-
-    tags.forEach(tag => {
-      if (tagPoints[tag] > maxPoints) {
-        maxPoints = tagPoints[tag];
-        bestTag = tag;
-      }
-    });
-
-    totalBonus += maxPoints;
-    chosenTags.push(bestTag);
-    breakdown.push(`${bestTag} (+${maxPoints})`);
-  }
-
-  return { score: totalBonus, chosenTags, breakdown: breakdown.join(' • ') };
-}
-
-function calcAcidentePontos(state, ctx) {
-  let pontos = 0;
-  let detalhe = "";
-  if (state.driver) {
-    const contagens = {};
-    state.driver.bonus.forEach(categoria => {
-      contagens[categoria] = ctx.countBus(c =>
-        !c.isCobrador &&
-        (c.faixa === categoria || c.temper === categoria || c.comp === categoria)
-      );
-    });
-
-    let categoriaMaior = "";
-    let maiorContagem = 0;
-    for (const [categoria, contagem] of Object.entries(contagens)) {
-      if (contagem > maiorContagem) {
-        maiorContagem = contagem;
-        categoriaMaior = categoria;
-      }
-    }
-
-    if (categoriaMaior) {
-      pontos = maiorContagem;
-      detalhe = `Dobrou a categoria ${categoriaMaior} do motorista: +${pontos}`;
-    }
-  }
-  return { pontos, detalhe };
-}
-
-function scorePerrengues(state, ctx, breakdown) {
-  let total = 0;
-
-  state.perrengues.forEach(perr => {
-    let pontos = 0;
-    let detalhe = "";
-
-    if (perr.id === "acidente") {
-      ({ pontos, detalhe } = calcAcidentePontos(state, ctx));
-    } else {
-      const count = ctx.countBus(c =>
-        !c.isCobrador &&
-        perr.bonus.some(tag => c.faixa === tag || c.temper === tag || c.comp === tag)
-      );
-
-      pontos = count * perr.pontos;
-      const sinal = perr.pontos > 0 ? "+" : "";
-      detalhe = `${sinal}${perr.pontos} por cada ${perr.bonus.join("/")}: ${count} × ${perr.pontos} = ${pontos}`;
-    }
-
-    breakdown.push({who: `[Perrengue] ${perr.nome}`, delta: pontos, detail: detalhe});
-    total += pontos;
-  });
-
-  return {score: total};
-}
-
-function scoreRotasDiarias(state, ctx, breakdown) {
-  let total = 0;
-
-  state.rotasDiarias.forEach(rota => {
-    let pontos = 0;
-    if (rota.condicao(ctx)) {
-      pontos = rota.pontos;
-      breakdown.push({who: `[Rota Diária] ${rota.nome}`, delta: pontos, detail: rota.efeito});
-    }
-    total += pontos;
-  });
-
-  return {score: total};
-}
-
-function collectApaixonadoGroups(nodes, state, ctx){
-  const visited = new Set();
-  const groups = [];
-  const key = (p)=> `${p.row},${p.col}`;
-  const isApxAt = (p)=> state.grid[p.row][p.col]?.card?.isApaixonado;
-
-  for(const n of nodes){
-    const k = key(n.pos);
-    if(visited.has(k)) continue;
-    const q=[n.pos]; visited.add(k);
-    const group=[];
-    while(q.length){
-      const cur = q.shift();
-      const card = state.grid[cur.row][cur.col].card;
-      group.push({pos:cur, card});
-      for(const nb of ctx.neighbors(cur)){
-        const kk = key(nb);
-        if(!visited.has(kk) && isApxAt(nb)) { visited.add(kk); q.push(nb); }
-      }
-    }
-    groups.push(group);
-  }
-  return groups;
-}
-
-function apaixonadosBonus(state, ctx){
-  if(!EXP_APX.checked) return {score:0, parts:[]};
-
-  const nodes = [];
-  ctx.forEachCard((pos, card)=>{
-    if(card.isApaixonado){ nodes.push({pos, card}); }
-  });
-  if(nodes.length<2) return {score:0, parts:[]};
-
-  const groups = collectApaixonadoGroups(nodes, state, ctx);
-
-  let totalBonus=0; const parts=[]; let idx=1;
-  for(const g of groups){
-    if(g.length>=2){
-      const sumBase = g.reduce((acc,x)=> acc + (x.card.base||0), 0);
-      const bonus = sumBase;
-      if(bonus>0){
-        totalBonus += bonus;
-        const seats = g.map(x=> seatNumber(x.pos)).sort((a,b)=>a-b).join(", ");
-        parts.push({who:`[Apaixonados] Grupo ${idx} (assentos ${seats})`, delta:+bonus, detail:`Bônus de dobro da soma base: ${sumBase} → +${bonus}`});
-        idx++;
-      }
-    }
-  }
-  return {score: totalBonus, parts};
-}
-
-function grupoPagodeBonus(state, ctx){
-  if(!EXP_GRUPO_PAGODE.checked) return {score:0, note:""};
-
-  const pagodeiros = [];
-  ctx.forEachCard((_p,c)=>{
-    if(GRUPO_PAGODE.some(g=>g.id===c.id)) pagodeiros.push(c);
-  });
-
-  if(pagodeiros.length === 5){
-    return {score:50, note:"Grupo de Pagode completo! +50 pontos extras!"};
-  }
-
-  return {score:0, note:""};
-}
-
-/* ============================
    RENDER / DETALHES
+   Cálculo delegado a GameLogic.js
 ============================= */
-function getCardLabel(card){
-  if(card.isCobrador) return "Habilidade";
-  if(card.isApaixonado) return "Apaixonado";
-  if(card.impacto.includes("durante") && card.text && /Ao embarcar/i.test(card.text)) return "Condição";
-  if(card.require && !card.ability && !card.penalty) return "Exigência";
-  if(card.scoreReq && !card.ability && !card.penalty) return "Condição de pontuação";
-  if(card.penalty && !card.ability) return "Penalidade";
-  if(card.ability) return "Habilidade";
-  return "Efeito";
-}
 
-function cardStaticInfo(card){
-  let attrs;
-  if(card.isCobrador) attrs = "[Cobrador]";
-  else if(card.isApaixonado) attrs = "[Apaixonado]";
-  else attrs = `${card.faixa}, ${card.temper}, ${card.comp}.`;
-  const pts = `${card.base} ponto${card.base===1?"":"s"}.`;
-  const label = getCardLabel(card);
-  const textLine = card.text ? `\n${label}: ${card.text}` : "";
-  return `${attrs} ${pts}${textLine}`;
-}
-
-function renderInactiveCardRow(card, pos, ctx){
-  const rq = card.require(ctx, pos) || {ok:false, msg:"Exigência não atendida."};
-  const msg = `<span class="req-badge">Exigência não atendida</span> <span class="req-text">${rq.msg || ""}</span>\n${cardStaticInfo(card)}`;
-  return rowLine(`Assento ${seatNumber(pos)} — ${card.nome}`, 0, msg, seatNumber(pos), "req");
-}
-
-function renderMateusCardRow(card, pos, state){
-  const mateusBonus = calculateMateusBonus(state);
-  const totalMateus = card.base + mateusBonus.score;
-  let detail = cardStaticInfo(card);
-  if(mateusBonus.score > 0){
-    detail += `\nBônus Coringa: +${mateusBonus.score}. Tags escolhidas: ${mateusBonus.breakdown}.`;
-  }else{
-    detail += `\nBônus Coringa: +0. <span class="req-text">Selecione um motorista ou melhorias para calcular o bônus ideal.</span>`;
+function buildPassengerRow(d) {
+  if (d.inactive) {
+    const msg = `<span class="req-badge">Exigência não atendida</span> <span class="req-text">${d.requireMsg || ""}</span>\n${d.cardInfo}`;
+    return rowLine(d.who, 0, msg, d.seatId, "req");
   }
-  return {row: rowLine(`Assento ${seatNumber(pos)} — ${card.nome}`, totalMateus, detail, seatNumber(pos)), score: totalMateus};
-}
-
-function renderRegularCardRow(card, pos, ctx){
-  let s = card.base; const notes = []; const log = (t)=> notes.push(t);
-  notes.push(cardStaticInfo(card));
-  if(card.ability) s += (card.ability(pos,ctx,log) || 0);
-  if(card.penalty) s += (card.penalty(pos,ctx,log) || 0);
-  let extraCls = "";
-  if(typeof card.scoreReq === "function"){
-    const sr = card.scoreReq(ctx,pos);
-    if(!sr.ok){
-      notes.push(`<span class="noscore-badge">Sem pontuação</span> <span class="req-text">${sr.msg||""}</span>\n(Continua contando para motorista, melhorias e adjacências)`);
-      s = 0; extraCls = "sc";
-    }
+  if (d.mateusBonus !== undefined) {
+    const mateusDetail = d.mateusBonus.score > 0
+      ? `${d.cardInfo}\nBônus Coringa: +${d.mateusBonus.score}. Tags escolhidas: ${d.mateusBonus.breakdown}.`
+      : `${d.cardInfo}\nBônus Coringa: +0. <span class="req-text">Selecione um motorista ou melhorias para calcular o bônus ideal.</span>`;
+    return rowLine(d.who, d.delta, mateusDetail, d.seatId);
   }
-  if(card.note && card.impacto.includes("durante")) notes.push(`Nota: ${card.note}`);
-  return {row: rowLine(`Assento ${seatNumber(pos)} — ${card.nome}`, s, notes.join("\n"), seatNumber(pos), extraCls), score: s};
-}
-
-function scorePassengers(state, ctx, isActiveAt){
-  const rows=[]; let passengersScore=0;
-  for(let r=0;r<ROWS;r++){
-    for(let c=0;c<COLS;c++){
-      const card = state.grid[r][c].card;
-      if(!card) continue;
-      const pos = {row:r,col:c};
-      if(!isActiveAt(pos) && typeof card.require==="function"){
-        rows.push(renderInactiveCardRow(card, pos, ctx));
-        continue;
-      }
-      if(card.id === 'mateus'){
-        const {row, score} = renderMateusCardRow(card, pos, state);
-        rows.push(row); passengersScore += score;
-        continue;
-      }
-      const {row, score} = renderRegularCardRow(card, pos, ctx);
-      rows.push(row); passengersScore += score;
-    }
+  const notes = [d.cardInfo, ...(d.abilityNotes || [])];
+  if (d.scoreSuppressed) {
+    notes.push(`<span class="noscore-badge">Sem pontuação</span> <span class="req-text">${d.scoreReqMsg || ""}</span>\n(Continua contando para motorista, melhorias e adjacências)`);
   }
-  return {rows, passengersScore};
-}
-
-function calcHandPenalty(ctx, state){
-  const hasIsabel = ctx.existsId("isabel");
-  const hasEdio = ctx.existsId("edio");
-  let handPenalty = 0;
-  let handDetail = "";
-
-  if (hasIsabel && hasEdio) {
-    handPenalty = state.hand || 0;
-    handDetail = `${handPenalty} (+1 por ${handPenalty} carta(s) na mão, pois Édio e Isabel estão juntos)`;
-  } else if (hasIsabel) {
-    handDetail = "0 (Isabel presente)";
-  } else {
-    handPenalty = -(state.hand || 0);
-    handDetail = handPenalty ? `${handPenalty} (–1 por ${Math.abs(handPenalty)} carta(s) na mão)` : "0";
-  }
-
-  return {hasIsabel, hasEdio, handPenalty, handDetail};
+  if (d.duringNote) notes.push(`Nota: ${d.duringNote}`);
+  return rowLine(d.who, d.delta, notes.join("\n"), d.seatId, d.scoreSuppressed ? "sc" : "");
 }
 
 function render(){
   const state = collectState();
-  const {ctx, warnings, isActiveAt} = buildCtx(state);
   updateBusVisualLabels(state);
 
-  const {rows, passengersScore} = scorePassengers(state, ctx, isActiveAt);
+  const tableCards = [];
+  for(let r = 0; r < ROWS; r++) for(let c = 0; c < COLS; c++) {
+    if(state.grid[r][c].card) tableCards.push({ card: state.grid[r][c].card, row: r, col: c });
+  }
 
-  const driverPts = scoreDriver(state, ctx);
-  const improvBreak=[]; const {score:improvPts, note:improvNote} = scoreImprovements(state, ctx, improvBreak);
+  const logic = new GameLogic({
+    driver:       state.driver,
+    improvements: state.improvements,
+    perrengues:   state.perrengues,
+    rotasDiarias: state.rotasDiarias,
+    expansions:   { apaixonados: EXP_APX.checked, grupoPagode: EXP_GRUPO_PAGODE.checked },
+  });
 
-  const perrenguesBreak = [];
-  const {score: perrenguesPts} = scorePerrengues(state, ctx, perrenguesBreak);
+  const { total, breakdown, warnings } = logic.calculate(tableCards, state.hand);
 
-  const rotasDiariasBreak = [];
-  const {score: rotasDiariasPts} = scoreRotasDiarias(state, ctx, rotasDiariasBreak);
+  sumPassengersEl.textContent   = breakdown.passengers.score;
+  sumDriverEl.textContent       = breakdown.driver.score;
+  sumImprovEl.textContent       = breakdown.improvements.score;
+  sumPerrenguesEl.textContent   = breakdown.perrengues.score;
+  sumRotasDiariasEl.textContent = breakdown.rotasDiarias.score;
+  sumHandEl.textContent         = breakdown.hand.score;
 
-  const apx = apaixonadosBonus(state, ctx);
-  const pagodeBonus = grupoPagodeBonus(state, ctx);
-
-  const {hasIsabel, hasEdio, handPenalty, handDetail} = calcHandPenalty(ctx, state);
-
-  sumPassengersEl.textContent = passengersScore;
-  sumDriverEl.textContent = driverPts;
-  sumImprovEl.textContent = improvPts;
-  sumPerrenguesEl.textContent = perrenguesPts;
-  sumRotasDiariasEl.textContent = rotasDiariasPts;
-  sumHandEl.textContent = handPenalty;
-
-  const total = passengersScore + driverPts + improvPts + perrenguesPts + rotasDiariasPts + apx.score + pagodeBonus.score + handPenalty;
   totalScoreEl.textContent = total;
   let scoreClass = "neu";
   if(total > 0) scoreClass = "good";
@@ -981,26 +676,28 @@ function render(){
   totalScoreEl.className = "v kpi " + scoreClass;
 
   const w = [];
-  if(improvNote) w.push(improvNote);
-  if(pagodeBonus.note) w.push(pagodeBonus.note);
-  if(hasIsabel && state.hand > 0 && !hasEdio) w.push(`Isabel (A Artesã) presente: cartas na mão não descontam pontos.`);
-  if(hasIsabel && hasEdio && state.hand > 0) w.push(`Édio e Isabel juntos: cartas na mão valem +1 ponto cada.`);
+  if(breakdown.improvements.note) w.push(breakdown.improvements.note);
+  if(breakdown.grupoPagode.note)  w.push(breakdown.grupoPagode.note);
+  if(breakdown.hand.hasIsabel && state.hand > 0 && !breakdown.hand.hasEdio)
+    w.push("Isabel (A Artesã) presente: cartas na mão não descontam pontos.");
+  if(breakdown.hand.hasIsabel && breakdown.hand.hasEdio && state.hand > 0)
+    w.push("Édio e Isabel juntos: cartas na mão valem +1 ponto cada.");
   if(warnings.length) w.push(...warnings);
   warningsEl.innerHTML = w.length ? `<div class="kpi warn">⚠ ${w.join("<br>⚠ ")}</div>` : "";
 
   const lines = [
-    ...rows,
-    ...improvBreak.map(x=>rowLine(x.who,x.delta,x.detail)),
-    ...perrenguesBreak.map(x=>rowLine(x.who, x.delta, x.detail)),
-    ...rotasDiariasBreak.map(x=>rowLine(x.who, x.delta, x.detail)),
-    ...(apx.parts||[]).map(x=>rowLine(x.who, x.delta, x.detail)),
+    ...breakdown.passengers.details.map(buildPassengerRow),
+    ...breakdown.improvements.details.map(x => rowLine(x.who, x.delta, x.detail)),
+    ...breakdown.perrengues.details.map(x   => rowLine(x.who, x.delta, x.detail)),
+    ...breakdown.rotasDiarias.details.map(x  => rowLine(x.who, x.delta, x.detail)),
+    ...(breakdown.apaixonados.details || []).map(x => rowLine(x.who, x.delta, x.detail)),
   ];
 
-  if(pagodeBonus.score > 0){
-    lines.push(rowLine("[Grupo de Pagode] Completo!", pagodeBonus.score, "Reuniu os 5 integrantes do Grupo de Pagode!"));
+  if(breakdown.grupoPagode.score > 0) {
+    lines.push(rowLine("[Grupo de Pagode] Completo!", breakdown.grupoPagode.score, "Reuniu os 5 integrantes do Grupo de Pagode!"));
   }
 
-  lines.push(rowLine("[Mão]", handPenalty, handDetail));
+  lines.push(rowLine("[Mão]", breakdown.hand.score, breakdown.hand.detail));
 
   EXPLAIN.innerHTML = lines.join("");
   if(currentBusFocus) scrollExplainToSeat(currentBusFocus);
@@ -1430,6 +1127,157 @@ btnNewRound.onclick = ()=>{
     render();
   }
 };
+
+/* ============================
+   INTEGRAÇÃO DO SCANNER (OCR)
+============================= */
+
+/**
+ * Aplica o resultado do scanZonas() ao estado do formulário e exibe
+ * um resumo para o usuário confirmar antes de calcular.
+ *
+ * @param {Object} data       — retorno de camera.scanZonas()
+ * @param {HTMLElement} confirmEl — elemento onde o resumo será renderizado
+ * @param {function} onConfirm   — callback chamado após o usuário confirmar
+ */
+function processScanResult(data, confirmEl, onConfirm) {
+  // ── Resolver objetos completos a partir dos IDs do OCR ──────────
+  const driverMatch    = data.motorista?.found?.[0]    ?? null;
+  const improvMatches  = (data.melhorias?.found         ?? []).slice(0, 3);
+  const perrengueMatch = data.perrengue?.found?.[0]    ?? null;
+  const rotaMatch      = data.rota?.found?.[0]         ?? null;
+  const passMatches    = (data.passageiros?.found       ?? []).slice(0, ROWS * COLS);
+
+  const driver       = driverMatch    ? DRIVERS.find(x => x.id === driverMatch.id)       ?? null : null;
+  const improvements = improvMatches.map(m => IMPROVEMENTS.find(x => x.id === m.id)).filter(Boolean);
+  const perrengueObj = perrengueMatch ? PERRENGUES.find(x => x.id === perrengueMatch.id) ?? null : null;
+  const rotaObj      = rotaMatch      ? ROTAS_DIARIAS.find(x => x.id === rotaMatch.id)   ?? null : null;
+
+  const tableCards = passMatches.map((m, i) => ({
+    card: findAnyCard(m.id),
+    row:  Math.floor(i / COLS),
+    col:  i % COLS,
+  })).filter(x => x.card);
+
+  // ── Calcular pontuação via GameLogic ────────────────────────────
+  const logic = new GameLogic({
+    driver,
+    improvements,
+    perrengues:   perrengueObj ? [perrengueObj] : [],
+    rotasDiarias: rotaObj      ? [rotaObj]      : [],
+    rows: ROWS,
+    cols: COLS,
+  });
+  const result = logic.calculate(tableCards, 0);
+  const bd     = result.breakdown;
+
+  // ── Montar Recibo de Viagem ──────────────────────────────────────
+  const fmtDelta = (n) => (n >= 0 ? `+${n}` : `${n}`);
+
+  const reciboRows = [
+    { label: `Passageiros (${tableCards.length})`,     score: bd.passengers.score   },
+    driver       ? { label: `Motorista: ${driver.nome}`,          score: bd.driver.score       } : null,
+    improvements.length
+                 ? { label: `Melhorias (${improvements.length})`, score: bd.improvements.score } : null,
+    perrengueObj ? { label: `Perrengue: ${perrengueObj.nome}`,    score: bd.perrengues.score   } : null,
+    rotaObj      ? { label: `Rota: ${rotaObj.nome}`,              score: bd.rotasDiarias.score } : null,
+  ].filter(Boolean);
+
+  const reciboHtml = reciboRows.map(r =>
+    `<div class="recibo-row">
+       <span>${r.label}</span>
+       <span class="${r.score >= 0 ? 'recibo-pos' : 'recibo-neg'}">${fmtDelta(r.score)}</span>
+     </div>`
+  ).join('');
+
+  // ── Texto-resumo das cartas encontradas ─────────────────────────
+  const parts = [];
+  if (driver)           parts.push(`motorista <b>${driver.nome}</b>`);
+  else                  parts.push('nenhum motorista');
+  if (improvements.length) parts.push(`${improvements.length} melhoria(s)`);
+  if (perrengueObj)     parts.push(`perrengue <b>${perrengueObj.nome}</b>`);
+  if (rotaObj)          parts.push(`rota <b>${rotaObj.nome}</b>`);
+  parts.push(`${passMatches.length} passageiro(s)`);
+
+  const passPreview = passMatches.length
+    ? `<div class="scan-cards-preview">${
+        passMatches.map(p =>
+          `<span class="scan-tag">${p.nome}<span class="scan-score"> ${Math.round(p.score * 100)}%</span></span>`
+        ).join('')
+      }</div>`
+    : '';
+
+  confirmEl.innerHTML = `
+    <div class="recibo-viagem">
+      <div class="recibo-total">
+        <span class="recibo-total-label">Pontuacao estimada</span>
+        <span class="recibo-total-num">${result.total}</span>
+      </div>
+      <div class="recibo-breakdown">${reciboHtml}</div>
+      <p class="scan-summary">Encontrei: ${parts.join(', ')}.</p>
+      ${passPreview}
+      <button id="scanConfirmBtn" class="scan-confirm-btn">Confirmar e aplicar</button>
+    </div>
+  `;
+  confirmEl.hidden = false;
+
+  document.getElementById('scanConfirmBtn').addEventListener('click', () => {
+    _applyScanToState(driver, improvements, perrengueObj, rotaObj, passMatches);
+    onConfirm?.();
+  });
+}
+
+/**
+ * Escreve os dados do scanner nos controles do formulário principal
+ * e dispara render().
+ */
+function _applyScanToState(driver, improvements, perrengueObj, rotaObj, passMatches) {
+  // ── Motorista ──
+  if (driver) { DRIVER_SEL.value = driver.id; renderDriverInfo(); }
+
+  // ── Melhorias ──
+  selectedImprovementIds.clear();
+  improvements.forEach(imp => selectedImprovementIds.add(imp.id));
+  IMPROV_BUTTONS_WRAP.querySelectorAll('button').forEach(btn => {
+    const imp = IMPROVEMENTS.find(i => i.nome === btn.textContent.trim());
+    btn.classList.toggle('sel', !!imp && selectedImprovementIds.has(imp.id));
+  });
+  renderImprovInfo();
+
+  // ── Perrengue ──
+  selectedPerrengueIds.clear();
+  if (perrengueObj) selectedPerrengueIds.add(perrengueObj.id);
+  PERR_BUTTONS_WRAP.querySelectorAll('button').forEach(btn => {
+    const p = PERRENGUES.find(x => x.nome === btn.textContent.trim());
+    btn.classList.toggle('sel', !!p && selectedPerrengueIds.has(p.id));
+  });
+  renderPerrengueInfo();
+
+  // ── Rota Diária ──
+  selectedRotasDiariasIds.clear();
+  if (rotaObj) selectedRotasDiariasIds.add(rotaObj.id);
+  ROTAS_DIARIAS_BUTTONS_WRAP.querySelectorAll('button').forEach(btn => {
+    const r = ROTAS_DIARIAS.find(x => x.nome === btn.textContent.trim());
+    btn.classList.toggle('sel', !!r && selectedRotasDiariasIds.has(r.id));
+  });
+  renderRotasDiariasInfo();
+
+  // ── Passageiros ──
+  GRID.querySelectorAll('select.seat-select').forEach(sel => { sel.value = ''; });
+  const seats = Array.from(GRID.querySelectorAll('select.seat-select'));
+  passMatches.forEach((match, i) => {
+    if (i >= seats.length) return;
+    if (findAnyCard(match.id)) seats[i].value = match.id;
+  });
+  GRID.querySelectorAll('select.seat-select').forEach(sel => {
+    const card  = findAnyCard(sel.value);
+    const label = sel.parentElement.nextElementSibling;
+    if (label) label.textContent = card ? card.nome : ' Adicionar ';
+  });
+
+  refreshSeatSelects();
+  render();
+}
 
 /* ============================
    INICIALIZAÇÃO

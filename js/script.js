@@ -70,6 +70,8 @@ const PERRENGUES = [
   {
     id: "obra",
     nome: "Obra na Avenida Principal",
+    // Manchete impressa na carta física — usada como alternativa de OCR
+    altNome: "Obras Atrasam Trabalhadores",
     efeito: "Cada Jogador deve mover 2 passageiros do seu busão para um busão adversário no sentido horário, e realizam seus efeitos de embarque caso tenha. Fim de jogo: Passageiros Adultos –1 ponto.",
     bonus: ["Adulto"],
     pontos: -1
@@ -703,3 +705,15 @@ const GRUPO_PAGODE = [
      note:"Especial: Pode fazer um outro pagodeiro da sua mão embarcar sem custo."
   })
 ];
+
+// Expõe constantes de jogo como propriedades globais (cardDefinitions.js acessa via globalThis)
+globalThis.DRIVERS        = DRIVERS;
+globalThis.IMPROVEMENTS   = IMPROVEMENTS;
+globalThis.PERRENGUES     = PERRENGUES;
+globalThis.ROTAS_DIARIAS  = ROTAS_DIARIAS;
+globalThis.CARD_DB        = CARD_DB;
+globalThis.COBRADORES     = COBRADORES;
+globalThis.APAIXONADOS    = APAIXONADOS;
+globalThis.ESTOU_NO_BUSAO = ESTOU_NO_BUSAO;
+globalThis.LENDAS_URBANAS = LENDAS_URBANAS;
+globalThis.GRUPO_PAGODE   = GRUPO_PAGODE;

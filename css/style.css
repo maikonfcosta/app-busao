@@ -216,6 +216,263 @@ dialog.modal[open]{display:flex}
 #itab-faq details[open]>summary::after{transform:rotate(180deg)}
 #itab-faq details .muted{padding:4px 12px 14px 12px}
 
+/* ======= Scanner de Câmera ======= */
+#scannerOverlay{
+  position:fixed;inset:0;z-index:10000;
+  background:rgba(2,6,23,.92);
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  gap:0;padding:0;
+  border:none;max-width:100%;max-height:100%;width:100%;height:100%;
+}
+#scannerOverlay[open]{display:flex}
+#scannerOverlay .scanner-card{
+  width:min(560px,96vw);
+  background:#0b1220;border:1px solid var(--line);border-radius:16px;overflow:hidden;
+}
+#scannerOverlay .scanner-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;border-bottom:1px solid var(--line);
+}
+#scannerOverlay .scanner-header span{font-weight:700;color:#fff}
+
+/* Aviso de orientação portrait */
+#orientationWarning{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:10px 14px;
+  background:#1d1500;border-bottom:1px solid #4d3800;
+  color:#fbbf24;font-size:13px;font-weight:600;text-align:center;
+}
+
+/* Container do vídeo — posição relativa para empilhar os canvas */
+#scanner-container{
+  position:relative;width:100%;background:#000;
+  line-height:0;          /* remove gap abaixo do <video> */
+}
+
+/* <video> gerado pelo CameraHandler */
+.camera-preview{
+  display:block;width:100%;
+  aspect-ratio:16/9;object-fit:cover;
+}
+
+/* <canvas> de guias de zona gerado pelo CameraHandler */
+.camera-overlay{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  pointer-events:none;    /* nunca bloqueia toque/click no vídeo */
+}
+
+/* ── Landscape: expande o card para ocupar toda a tela ── */
+@media (orientation:landscape) and (max-height:560px){
+  #scannerOverlay{padding:0}
+  #scannerOverlay .scanner-card{
+    width:100vw;max-width:100vw;
+    border-radius:0;border-left:none;border-right:none;
+    display:flex;flex-direction:row;flex-wrap:wrap;
+    max-height:100dvh;overflow-y:auto;
+  }
+  #scannerOverlay .scanner-header{
+    width:100%;flex-shrink:0;
+  }
+  #scanner-container{
+    flex:1 1 60%;min-width:0;
+  }
+  .camera-preview{
+    aspect-ratio:unset;height:calc(100dvh - 44px);  /* 44px = header */
+    object-fit:contain;
+  }
+  #scannerStatus,#scannerCaptureBtn,#scannerResults,#orientationWarning,#scannerWizardBar{
+    flex:0 0 auto;width:calc(40% - 1px);
+    box-sizing:border-box;
+  }
+  #scannerCaptureBtn{margin:8px;width:calc(100% - 16px)}
+}
+
+#scannerStatus{
+  padding:8px 14px;font-size:13px;color:var(--muted);text-align:center;min-height:36px;
+}
+#scannerCaptureBtn{
+  margin:0 14px 14px;width:calc(100% - 28px);
+  padding:12px;border-radius:12px;
+  background:#0f2a52;border:1px solid var(--accent-2);
+  color:#e6f1ff;font-weight:700;font-size:15px;cursor:pointer;
+  transition:transform .08s ease;
+}
+#scannerCaptureBtn:hover{transform:translateY(-1px)}
+#scannerCaptureBtn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+
+#scannerResults{
+  margin:0 14px 14px;padding:10px 12px;
+  background:rgba(15,42,82,.6);border:1px solid var(--accent-2);
+  border-radius:10px;color:#e6f1ff;font-size:13px;
+}
+.scan-summary{margin:0 0 8px;line-height:1.6}
+.scan-cards-preview{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+.scan-tag{
+  background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.35);
+  border-radius:6px;padding:2px 7px;font-size:12px;white-space:nowrap;
+}
+.scan-score{font-size:11px;opacity:.6}
+.scan-confirm-btn{
+  width:100%;padding:10px;border-radius:10px;
+  background:#1d4ed8;border:none;color:#fff;
+  font-weight:700;font-size:14px;cursor:pointer;
+  transition:background .1s;
+}
+.scan-confirm-btn:hover{background:#2563eb}
+
+/* ── Capture Preview Card ── */
+#capturePreview{
+  margin-top:.75rem;
+  border:1px solid #2e3440;
+  border-radius:.75rem;
+  overflow:hidden;
+  background:#161b25;
+}
+.cp-photo-wrap{
+  width:100%;max-height:180px;
+  background:#000;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+}
+.cp-photo{width:100%;max-height:180px;object-fit:cover}
+.cp-step-label{
+  margin:0;padding:.5rem .75rem .1rem;
+  font-size:.7rem;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--accent,#fbbf24);
+}
+.cp-found-list{
+  list-style:none;margin:0;padding:.2rem .75rem .5rem;font-size:.82rem;color:var(--fg,#e2e8f0);
+}
+.cp-found-item{display:flex;align-items:center;gap:.45rem;padding:.15rem 0;}
+.cp-found-cb{width:1rem;height:1rem;flex-shrink:0;cursor:pointer;accent-color:#4ade80;}
+.cp-found-label{cursor:pointer;}
+.cp-empty{
+  margin:0;padding:.2rem .75rem .5rem;
+  font-size:.82rem;color:var(--bad,#f87171);
+}
+.cp-actions{
+  display:flex;flex-wrap:wrap;gap:.4rem;
+  padding:.5rem .75rem .75rem;
+  border-top:1px solid #2e3440;
+}
+.cp-actions .btn{flex:1;min-width:0}
+
+/* ── Gate: Este ônibus possui Melhorias? ── */
+#improvGate{
+  display:flex;flex-direction:column;align-items:center;
+  gap:1.2rem;padding:2rem 1.5rem;text-align:center;
+}
+.improv-gate-q{
+  margin:0;font-size:1.05rem;color:#e6f1ff;line-height:1.4;
+}
+.improv-gate-q strong{color:#a855f7}
+.improv-gate-btns{display:flex;gap:.75rem}
+.improv-gate-btns .btn{min-width:100px}
+
+/* ── Linha de ações do scanner (Escanear + Finalizar) ── */
+.scanner-action-row{
+  display:flex;gap:.5rem;flex-wrap:wrap;
+  padding:.5rem .75rem 0;
+}
+.scanner-action-row #scannerCaptureBtn{ flex:1 }
+.btn-finish-scan{
+  flex:1;
+  background:transparent;
+  border:1px solid #22c55e88;
+  color:#86efac;
+  border-radius:8px;padding:.45rem .75rem;
+  font-size:.82rem;font-weight:600;cursor:pointer;
+  transition:background .2s,color .2s;
+}
+.btn-finish-scan:hover{ background:#22c55e18;color:#86efac }
+
+/* ── Toast de notificação do scanner ── */
+.scanner-toast{
+  position:fixed;bottom:80px;left:50%;
+  transform:translateX(-50%) translateY(12px);
+  background:#1e293b;color:#e6f1ff;
+  padding:.45rem 1.1rem;border-radius:10px;
+  font-size:.85rem;font-weight:500;
+  border:1px solid #334155;
+  box-shadow:0 4px 18px rgba(0,0,0,.55);
+  opacity:0;pointer-events:none;
+  transition:opacity .25s,transform .25s;
+  z-index:9999;max-width:90vw;text-align:center;
+}
+.scanner-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.scanner-toast--success{border-color:#22c55e66;color:#bbf7d0}
+.scanner-toast--warn{border-color:#f8717188;color:#fca5a5}
+
+/* ── Debug OCR preview (miniatura P&B enviada ao Tesseract) ── */
+.debug-ocr-wrap{
+  position:absolute;top:8px;right:8px;z-index:20;
+  background:rgba(0,0,0,.72);border:1px solid #334155;
+  border-radius:6px;padding:4px 4px 2px;pointer-events:none;
+}
+.debug-ocr-lbl{
+  display:block;font-size:9px;color:#64748b;text-align:center;
+  text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;
+}
+.debug-ocr-img{
+  display:block;width:110px;height:auto;border-radius:3px;
+  image-rendering:pixelated;
+}
+
+/* ── OCR preview flash ── */
+.ocr-flash{
+  position:absolute;inset:0;z-index:10;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.55);
+  animation:ocr-fade 1s ease-out forwards;
+  pointer-events:none;
+}
+.ocr-flash-img{
+  max-width:80%;max-height:80%;
+  border:2px solid var(--accent);border-radius:8px;
+  box-shadow:0 0 20px rgba(96,165,250,.4);
+}
+@keyframes ocr-fade{0%{opacity:1}70%{opacity:1}100%{opacity:0}}
+
+/* ── Recibo de Viagem ── */
+.recibo-viagem{display:flex;flex-direction:column;gap:8px}
+.recibo-total{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:8px 10px;border-radius:8px;
+  background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.3);
+}
+.recibo-total-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.recibo-total-num{font-size:26px;font-weight:800;color:#e6f1ff}
+.recibo-breakdown{display:flex;flex-direction:column;gap:3px;margin-bottom:2px}
+.recibo-row{
+  display:flex;justify-content:space-between;
+  font-size:12px;padding:3px 0;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.recibo-row span:first-child{color:var(--muted)}
+.recibo-pos{color:var(--ok);font-weight:700}
+.recibo-neg{color:var(--bad);font-weight:700}
+
+/* ── Wizard bar ── */
+#scannerWizardBar{
+  padding:10px 14px 8px;
+  border-bottom:1px solid var(--line);
+  background:#0b1220;
+}
+.wizard-dots{display:flex;gap:6px;margin-bottom:6px}
+.wdot{
+  width:10px;height:10px;border-radius:50%;
+  background:#334155;flex-shrink:0;
+  transition:background .2s;
+}
+.wdot.done{background:#22c55e}
+.wdot.active{background:#60a5fa;box-shadow:0 0 6px #60a5fa88}
+.wizard-label{
+  font-weight:700;font-size:13px;color:#e6f1ff;
+  letter-spacing:.03em;margin-bottom:2px;
+}
+.wizard-hint{font-size:12px;color:var(--muted)}
+
 /* ======= Responsividade ======= */
 @media (max-width:1080px){
   .wrap{grid-template-columns:1fr}
