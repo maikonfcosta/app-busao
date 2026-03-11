@@ -107,6 +107,59 @@ const PERRENGUES = [
 ];
 
 /* ============================
+   ROTAS DIÁRIAS — AUXILIAR
+============================= */
+
+/**
+ * BFS a partir de (startRow, startCol) contando cartas contíguas que passam em `predicate`.
+ * @param {object}   ctx
+ * @param {number}   startRow
+ * @param {number}   startCol
+ * @param {function} predicate — (card) => boolean
+ * @returns {number} tamanho do cluster
+ */
+function _clusterSize(ctx, startRow, startCol, predicate) {
+  const visited = new Set([`${startRow},${startCol}`]);
+  const queue   = [{ row: startRow, col: startCol }];
+  let count = 0;
+  while (queue.length) {
+    const cur = queue.shift();
+    count++;
+    for (const nb of ctx.neighbors(cur)) {
+      const key = `${nb.row},${nb.col}`;
+      if (!visited.has(key)) {
+        const nbCard = ctx.grid[nb.row][nb.col].card;
+        if (nbCard && predicate(nbCard)) {
+          visited.add(key);
+          queue.push(nb);
+        }
+      }
+    }
+  }
+  return count;
+}
+
+/**
+ * Retorna o tamanho do maior cluster contíguo de cartas que satisfazem `predicate`.
+ * Usado pelas condições de Rota Comum (Equilibrado) e Passar do Cinema (Silencioso).
+ * @param {object}   ctx
+ * @param {function} predicate — (card) => boolean
+ * @returns {number}
+ */
+function _maxConnectedCluster(ctx, predicate) {
+  let maxAdj = 0;
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const card = ctx.grid[r][c].card;
+      if (!card || !predicate(card)) continue;
+      const count = _clusterSize(ctx, r, c, predicate);
+      if (count > maxAdj) maxAdj = count;
+    }
+  }
+  return maxAdj;
+}
+
+/* ============================
    ROTAS DIÁRIAS (EXPANSÃO)
 ============================= */
 const ROTAS_DIARIAS = [
@@ -148,36 +201,7 @@ const ROTAS_DIARIAS = [
     efeito: "+10 pontos se houver 5 ou mais equilibrados adjacentes.",
     bonus: ["Equilibrado"],
     pontos: 10,
-    condicao: (ctx) => {
-      let maxAdj = 0;
-      for(let r=0;r<ROWS;r++) {
-        for(let c=0;c<COLS;c++) {
-          const card = ctx.grid[r][c].card;
-          if(card && !card.isCobrador && card.temper === "Equilibrado") {
-            const visited = new Set();
-            const queue = [{row:r, col:c}];
-            visited.add(`${r},${c}`);
-            let count = 0;
-            while(queue.length) {
-              const cur = queue.shift();
-              count++;
-              for(const nb of ctx.neighbors(cur)) {
-                const key = `${nb.row},${nb.col}`;
-                if(!visited.has(key)) {
-                  const nbCard = ctx.grid[nb.row][nb.col].card;
-                  if(nbCard && !nbCard.isCobrador && nbCard.temper === "Equilibrado") {
-                    visited.add(key);
-                    queue.push(nb);
-                  }
-                }
-              }
-            }
-            if(count > maxAdj) maxAdj = count;
-          }
-        }
-      }
-      return maxAdj >= 5;
-    }
+    condicao: (ctx) => _maxConnectedCluster(ctx, c => !c.isCobrador && c.temper === "Equilibrado") >= 5
   },
   {
     id: "via_paraiso",
@@ -193,36 +217,7 @@ const ROTAS_DIARIAS = [
     efeito: "+10 pontos se houver 5 ou mais Silenciosos adjacentes.",
     bonus: ["Silencioso"],
     pontos: 10,
-    condicao: (ctx) => {
-      let maxAdj = 0;
-      for(let r=0;r<ROWS;r++) {
-        for(let c=0;c<COLS;c++) {
-          const card = ctx.grid[r][c].card;
-          if(card && !card.isCobrador && card.comp === "Silencioso") {
-            const visited = new Set();
-            const queue = [{row:r, col:c}];
-            visited.add(`${r},${c}`);
-            let count = 0;
-            while(queue.length) {
-              const cur = queue.shift();
-              count++;
-              for(const nb of ctx.neighbors(cur)) {
-                const key = `${nb.row},${nb.col}`;
-                if(!visited.has(key)) {
-                  const nbCard = ctx.grid[nb.row][nb.col].card;
-                  if(nbCard && !nbCard.isCobrador && nbCard.comp === "Silencioso") {
-                    visited.add(key);
-                    queue.push(nb);
-                  }
-                }
-              }
-            }
-            if(count > maxAdj) maxAdj = count;
-          }
-        }
-      }
-      return maxAdj >= 5;
-    }
+    condicao: (ctx) => _maxConnectedCluster(ctx, c => !c.isCobrador && c.comp === "Silencioso") >= 5
   },
   {
     id: "parar_feira",
@@ -264,8 +259,8 @@ function reqImprovement(ctx, name) {
 /* ============================
    CARTAS (passageiros base)
 ============================= */
-function P(obj){ return Object.assign({base:0,faixa:"Adulto",temper:"Equilibrado",comp:"Comunicativo",
-  impacto:"final", ability:null, penalty:null, require:null, scoreReq:null, note:null, text:null, isCobrador:false, allowDup:false, isApaixonado:false}, obj); }
+function P(obj){ return {base:0,faixa:"Adulto",temper:"Equilibrado",comp:"Comunicativo",
+  impacto:"final", ability:null, penalty:null, require:null, scoreReq:null, note:null, text:null, isCobrador:false, allowDup:false, isApaixonado:false, ...obj}; }
 
 const CARD_DB = [
   // Passageiros com Habilidades
@@ -302,7 +297,7 @@ const CARD_DB = [
   }),
   P({id:"sophia",nome:"Sophia (A Blogueira)",base:2,faixa:"Jovem",temper:"Caótico",comp:"Barulhento",
      text:"Se houver a melhoria Wi-Fi e Tomadas, +2 pontos por cada Jovem no Busão.",
-     ability:(_p,ctx,log)=>{ if(!ctx.hasImprovement("Wi-Fi e Tomadas")) return 0; const n=ctx.countBus(c=>!c.isCobrador && c.faixa==="Jovem");
+     ability:(_p,ctx,log)=>{ if(!ctx.hasImprovement("Wi-Fi e Tomadas")) { return 0; } const n=ctx.countBus(c=>!c.isCobrador && c.faixa==="Jovem");
        if(n){log(`+${2*n} (Wi-Fi ativo: +2 por ${n} Jovem no busão)`);} return 2*n; }
   }),
   P({id:"seu_horacio",nome:"Seu Horácio (O Antissocial)",base:3,faixa:"Idoso",temper:"Equilibrado",comp:"Silencioso",
@@ -576,7 +571,7 @@ const ESTOU_NO_BUSAO = [
   }),
   P({id:"lais_fofinha",nome:"Lais (A Fofinha)",base:1,faixa:"Jovem",temper:"Tranquilo",comp:"Comunicativo",
      text:"Se houver a melhoria Ar-condicionado, +1 ponto para cada passageiro adjacente.",
-     ability:(p,ctx,log)=>{ if(!ctx.hasImprovement("Ar-condicionado")) return 0; const n=ctx.countAdj(p,()=>true); if(n){log(`+${n} (Ar-condicionado ativo: +1 por ${n} adj.)`);} return n; }
+     ability:(p,ctx,log)=>{ if(!ctx.hasImprovement("Ar-condicionado")) { return 0; } const n=ctx.countAdj(p,()=>true); if(n){log(`+${n} (Ar-condicionado ativo: +1 por ${n} adj.)`);} return n; }
   }),
   P({id:"brenda_ti",nome:"Brenda (A moça do TI)",base:2,faixa:"Adulto",temper:"Equilibrado",comp:"Silencioso",
      note:"Pode embarcar 1 passageiro sem custo em qualquer Busão."
@@ -617,7 +612,7 @@ const ESTOU_NO_BUSAO = [
   }),
   P({id:"beatriz",nome:"Beatriz (A Fisioterapeuta)",base:2,faixa:"Adulto",temper:"Equilibrado",comp:"Comunicativo",
      text:"Se no busão estiver a melhoria 'Acessibilidade', +3 para cada idoso adjacente.",
-     ability:(p,ctx,log)=>{ if(!ctx.hasImprovement("Acessibilidade")) return 0; const n=ctx.countAdj(p,c=>c.faixa==="Idoso");
+     ability:(p,ctx,log)=>{ if(!ctx.hasImprovement("Acessibilidade")) { return 0; } const n=ctx.countAdj(p,c=>c.faixa==="Idoso");
        if(n){log(`+${3*n} (Acessibilidade ativa: +3 por ${n} Idoso adj.)`);} return 3*n; }
   }),
   P({id:"lucas",nome:"Lucas (O Mario do Carnaval)",base:6,faixa:"Adulto",temper:"Equilibrado",comp:"Comunicativo",
