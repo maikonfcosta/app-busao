@@ -88,6 +88,33 @@ class CameraHandler {
   onPreviewCapture   = null;   // callback(dataUrl) — recorte enviado ao OCR
   onDebugPreview     = null;   // callback(enhancedDataUrl) — imagem P&B enviada ao Tesseract
 
+  // ── Singleton do Tesseract Worker ────────────────────────────────
+  static _tesseractWorker = null;
+  static _workerInitPromise = null;
+
+  /** Inicializa e retorna o motor OCR persistente, relatando progresso. */
+  async _getWorker(report) {
+    if (CameraHandler._tesseractWorker) return CameraHandler._tesseractWorker;
+    if (CameraHandler._workerInitPromise) return CameraHandler._workerInitPromise;
+    
+    CameraHandler._workerInitPromise = (async () => {
+      report('Inicializando Inteligência Artificial...');
+      const worker = await Tesseract.createWorker('por', 1, {
+        logger: m => {
+          if (m.status === 'recognizing text') return;
+          if (m.status.includes('loading') || m.status.includes('downloading')) {
+            report(`Baixando motor OCR: ${Math.round(m.progress * 100)}%`);
+          } else if (m.status === 'initializing api') {
+            report('Iniciando OCR...');
+          }
+        }
+      });
+      CameraHandler._tesseractWorker = worker;
+      return worker;
+    })();
+    return CameraHandler._workerInitPromise;
+  }
+
   /* ============================
      INICIALIZAÇÃO
   ============================= */
@@ -445,13 +472,15 @@ class CameraHandler {
     this.onPreviewCapture?.(dataUrl);
 
     // ── OCR com processamento específico por etapa ───────────────
+    const worker = await this._getWorker(report);
     report(`Processando "${step.label}"…`);
-    const worker = await Tesseract.createWorker('por', 1, { logger: () => {} });
+    
     try {
       const newResult = await this._runStepOcr(step.id, dataUrl, worker, report);
       this._finaliseStepResult(step.id, newResult, merge);
-    } finally {
-      await worker.terminate();
+    } catch (e) {
+      console.error("Erro durante o OCR:", e);
+      report('Falha no processamento. Tente novamente.');
     }
     // ── Feedback visual de confiança ─────────────────────────────
     this._overlayAccent = this._lastConfidence >= 60 ? '#22c55e' : '#ef4444';
@@ -641,8 +670,7 @@ class CameraHandler {
 
     const report = (msg) => { if (onProgress) onProgress(msg); };
 
-    report('Inicializando OCR…');
-    const worker = await Tesseract.createWorker('por', 1, { logger: () => {} });
+    const worker = await this._getWorker(report);
 
     const result = {};
     const keys   = Object.keys(zones);
@@ -659,7 +687,6 @@ class CameraHandler {
       result[key] = matchCardsInZone(text, key);
     }
 
-    await worker.terminate();
     report('Scan concluído.');
     return result;
   }

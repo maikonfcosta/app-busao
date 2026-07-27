@@ -41,6 +41,48 @@ const btnClearSeats = document.getElementById("btnClearSeats");
 const btnNewRound = document.getElementById("btnNewRound");
 const btnSaveScore = document.getElementById("btnSaveScore");
 const btnResetRanking = document.getElementById("btnResetRanking");
+const btnShareScore = document.getElementById("btnShareScore");
+
+// Compartilhar Placar
+btnShareScore?.addEventListener("click", () => {
+  const panel = document.querySelectorAll(".panel")[1]; // Painel de Resultado
+  if (window.html2canvas) {
+    btnShareScore.textContent = "Gerando...";
+    html2canvas(panel, { backgroundColor: '#0f172a' }).then(canvas => {
+      const link = document.createElement('a');
+      link.download = 'placar-busao.png';
+      link.href = canvas.toDataURL();
+      link.click();
+      btnShareScore.textContent = "Compartilhar Placar 📸";
+    }).catch(err => {
+      console.error(err);
+      btnShareScore.textContent = "Erro!";
+      setTimeout(() => btnShareScore.textContent = "Compartilhar Placar 📸", 2000);
+    });
+  }
+});
+
+/* ============================
+   TEMA (Dark/Light)
+   ============================ */
+const themeToggle = document.getElementById('themeToggle');
+const currentTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+if (currentTheme === 'light') {
+  document.documentElement.setAttribute('data-theme', 'light');
+  if (themeToggle) themeToggle.textContent = '🌙';
+}
+themeToggle?.addEventListener('click', () => {
+  let theme = document.documentElement.getAttribute('data-theme');
+  if (theme === 'light') {
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('theme', 'dark');
+    themeToggle.textContent = '☀️';
+  } else {
+    document.documentElement.setAttribute('data-theme', 'light');
+    localStorage.setItem('theme', 'light');
+    themeToggle.textContent = '🌙';
+  }
+});
 
 /* ============================
    ABAS (topo)
@@ -280,6 +322,9 @@ function mountGrid(){
       ));
       sel.dataset.row=r; sel.dataset.col=c;
 
+      const name = document.createElement("div");
+      name.className="slot-name muted"; name.textContent = "Adicionar ";
+
       sel.addEventListener("change", ()=>{
         const chosen = findAnyCard(sel.value);
         name.textContent = chosen ? chosen.nome : " Adicionar ";
@@ -287,9 +332,6 @@ function mountGrid(){
         updateBusVisualLabels(collectState());
         render();
       });
-
-      const name = document.createElement("div");
-      name.className="slot-name muted"; name.textContent = "Adicionar ";
 
       seat.addEventListener("click", (ev)=>{
         if(ev.target.tagName.toLowerCase()==="select") return;

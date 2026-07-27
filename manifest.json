@@ -1,0 +1,17 @@
+{
+  "name": "Busão - Calculadora",
+  "short_name": "Busão",
+  "description": "Calculadora de pontuação para o jogo de tabuleiro Busão",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b1022",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3253/3253023.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

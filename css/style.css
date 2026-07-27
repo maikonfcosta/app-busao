@@ -490,6 +490,35 @@ dialog.modal[open]{display:flex}
   header h1{font-size:15px}
   .total .v{font-size:24px}
 }
-@media (max-width:350px){
-  .grid{grid-template-columns:1fr}
 }
+
+/* ======= THEME TOGGLE (LIGHT MODE) ======= */
+:root[data-theme="light"] {
+  --bg:#f8fafc; --panel:#ffffff; --muted:#64748b; --text:#0f172a;
+  --ok:#059669; --bad:#dc2626; --warn:#d97706; --card:#f1f5f9; --chip:#e2e8f0;
+  --line:#e2e8f0; --line2:#cbd5e1; --accent:#2563eb; --accent-2:#1d4ed8;
+}
+:root[data-theme="light"] body { background: var(--bg); }
+:root[data-theme="light"] .tabs-top { background: var(--panel); border-bottom: 1px solid var(--line); }
+:root[data-theme="light"] .tabs-top .tabbtn { background: var(--card); color: var(--text); border-color: var(--line2); }
+:root[data-theme="light"] .tabs-top .tabbtn.act { background: var(--accent); color: #fff; }
+:root[data-theme="light"] input, :root[data-theme="light"] select, :root[data-theme="light"] textarea { background: #fff; color: var(--text); border-color: var(--line2); }
+:root[data-theme="light"] .btn { background: var(--card); border-color: var(--line2); color: var(--text); }
+:root[data-theme="light"] .btn.accent, :root[data-theme="light"] .btn.acc { background: var(--accent); color: #fff; border-color: var(--accent-2); }
+:root[data-theme="light"] .btn.warn { background: #fee2e2; color: #991b1b; border-color: #f87171; }
+:root[data-theme="light"] .btn.ghost { background: transparent; border-color: transparent; }
+:root[data-theme="light"] .seat { background: #f8fafc; border-color: var(--line2); }
+:root[data-theme="light"] .total { background: #f8fafc; }
+:root[data-theme="light"] .row.hl { background: #eff6ff; }
+:root[data-theme="light"] .catalog { background: #f8fafc; }
+:root[data-theme="light"] .cat-item { background: #fff; border-color: var(--line2); }
+:root[data-theme="light"] .cat-filter-btn { background: #fff; color: var(--text); border-color: var(--line2); }
+:root[data-theme="light"] .cat-filter-btn.act { background: var(--accent); color: #fff; border-color: var(--accent-2); }
+:root[data-theme="light"] .popover { background: #fff; border-color: var(--line2); color: var(--text); }
+:root[data-theme="light"] dialog.modal .modal-card { background: #f8fafc; }
+:root[data-theme="light"] .picker-item { background: #fff; border-color: var(--line2); }
+:root[data-theme="light"] .picker-name { color: var(--text); }
+:root[data-theme="light"] #pickerTitle { color: var(--text); }
+:root[data-theme="light"] .pill { background: #fff; color: var(--text); border-color: var(--line2); }
+:root[data-theme="light"] .pill.act { background: var(--accent); color: #fff; }
+:root[data-theme="light"] .section-title { color: var(--text); }

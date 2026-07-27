@@ -312,7 +312,7 @@ class GameLogic {
   _scorePerrengues(state, ctx, breakdown) {
     let total = 0;
     state.perrengues.forEach(perr => {
-      let pontos = 0, detalhe = '';
+      let pontos, detalhe;
       if (perr.id === 'acidente') {
         ({ pontos, detalhe } = this._calcAcidentePontos(state, ctx));
       } else {
@@ -494,7 +494,7 @@ class GameLogic {
   _calcHandPenalty(ctx, state) {
     const hasIsabel = ctx.existsId('isabel');
     const hasEdio   = ctx.existsId('edio');
-    let handPenalty = 0, handDetail = '';
+    let handPenalty = 0, handDetail;
 
     if (hasIsabel && hasEdio) {
       handPenalty = state.hand || 0;
@@ -507,4 +507,9 @@ class GameLogic {
     }
     return { hasIsabel, hasEdio, handPenalty, handDetail };
   }
+}
+
+// Export for Node.js (Jest testing)
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = GameLogic;
 }

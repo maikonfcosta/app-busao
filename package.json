@@ -1,0 +1,30 @@
+{
+  "name": "app-busao",
+  "version": "1.0.0",
+  "description": "![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow)",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "lint": "eslint \"js/**/*.js\" \"src/**/*.js\"",
+    "format": "prettier --write \"js/**/*.js\" \"src/**/*.js\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maikonfcosta/app-busao.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/maikonfcosta/app-busao/issues"
+  },
+  "homepage": "https://github.com/maikonfcosta/app-busao#readme",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
+    "globals": "^17.8.0",
+    "jest": "^30.4.2",
+    "prettier": "^3.9.6"
+  }
+}
