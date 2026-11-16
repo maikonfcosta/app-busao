@@ -50,11 +50,22 @@ btnShareScore?.addEventListener("click", () => {
     btnShareScore.textContent = "Gerando...";
     const bgCol = window.getComputedStyle(panel).backgroundColor || (document.documentElement.dataset.theme === 'light' ? '#ffffff' : '#0f172a');
     html2canvas(panel, { backgroundColor: bgCol }).then(canvas => {
-      const link = document.createElement('a');
-      link.download = 'placar-busao.png';
-      link.href = canvas.toDataURL();
-      link.click();
-      btnShareScore.textContent = "Compartilhar Placar 📸";
+      canvas.toBlob(blob => {
+        if (blob && navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], 'placar-busao.png', { type: 'image/png' })] })) {
+          const file = new File([blob], 'placar-busao.png', { type: 'image/png' });
+          navigator.share({
+            title: 'Placar do Busão',
+            text: `Minha pontuação no jogo Busão: ${totalScoreEl.textContent} pontos! 🚌`,
+            files: [file]
+          }).then(() => {
+            btnShareScore.textContent = "Compartilhar Placar 📸";
+          }).catch(() => {
+            triggerDownload(canvas);
+          });
+        } else {
+          triggerDownload(canvas);
+        }
+      }, 'image/png');
     }).catch(err => {
       console.error(err);
       btnShareScore.textContent = "Erro!";
@@ -62,6 +73,14 @@ btnShareScore?.addEventListener("click", () => {
     });
   }
 });
+
+function triggerDownload(canvas) {
+  const link = document.createElement('a');
+  link.download = 'placar-busao.png';
+  link.href = canvas.toDataURL();
+  link.click();
+  btnShareScore.textContent = "Compartilhar Placar 📸";
+}
 
 /* ============================
    TEMA (Dark/Light)
@@ -298,8 +317,47 @@ function renderRotasDiariasInfo(){
 }
 
 /* ============================
-   GRID 2 × 6 (com selects escondidos)
+   GRID 2 × 6 (com selects escondidos & Ações Rápidas)
 ============================= */
+let pendingSwapSeatNo = null;
+
+function clearSwapState() {
+  pendingSwapSeatNo = null;
+  GRID.querySelectorAll(".seat").forEach(s => s.classList.remove("swap-pending"));
+}
+
+function handleSeatSwapClick(seatNo, e) {
+  e.stopPropagation();
+  const rc = seatNumToRC(seatNo);
+  const currentSeatEl = GRID.querySelector(`.seat[data-row="${rc.row}"][data-col="${rc.col}"]`);
+
+  if (pendingSwapSeatNo === null) {
+    pendingSwapSeatNo = seatNo;
+    currentSeatEl?.classList.add("swap-pending");
+  } else if (pendingSwapSeatNo === seatNo) {
+    clearSwapState();
+  } else {
+    executeSwap(pendingSwapSeatNo, seatNo);
+  }
+}
+
+function executeSwap(seatA, seatB) {
+  const rcA = seatNumToRC(seatA);
+  const rcB = seatNumToRC(seatB);
+  const selA = GRID.querySelector(`select.seat-select[data-row="${rcA.row}"][data-col="${rcA.col}"]`);
+  const selB = GRID.querySelector(`select.seat-select[data-row="${rcB.row}"][data-col="${rcB.col}"]`);
+
+  if (selA && selB) {
+    const valA = selA.value;
+    const valB = selB.value;
+    selA.value = valB;
+    selB.value = valA;
+    selA.dispatchEvent(new Event("change"));
+    selB.dispatchEvent(new Event("change"));
+  }
+  clearSwapState();
+}
+
 function mountGrid(){
   GRID.innerHTML="";
   for(let r=0;r<ROWS;r++){
@@ -309,7 +367,40 @@ function mountGrid(){
       seat.className="seat";
       seat.dataset.row=r; seat.dataset.col=c; seat.dataset.seatno=seatNo;
 
-      const pos = document.createElement("div"); pos.className="pos"; pos.textContent = `Assento ${seatNo}`; seat.appendChild(pos);
+      const topBar = document.createElement("div");
+      topBar.className = "seat-top-bar";
+
+      const pos = document.createElement("div");
+      pos.className="pos";
+      pos.textContent = `Assento ${seatNo}`;
+      topBar.appendChild(pos);
+
+      const actions = document.createElement("div");
+      actions.className = "seat-actions";
+      actions.style.display = "none";
+
+      const swapBtn = document.createElement("button");
+      swapBtn.type = "button";
+      swapBtn.className = "btn-seat-action seat-swap-btn";
+      swapBtn.title = "Trocar de lugar com outro assento";
+      swapBtn.textContent = "⇄";
+      swapBtn.onclick = (e) => handleSeatSwapClick(seatNo, e);
+
+      const clearBtn = document.createElement("button");
+      clearBtn.type = "button";
+      clearBtn.className = "btn-seat-action seat-clear-btn";
+      clearBtn.title = "Remover passageiro deste assento";
+      clearBtn.textContent = "✕";
+      clearBtn.onclick = (e) => {
+        e.stopPropagation();
+        sel.value = "";
+        sel.dispatchEvent(new Event("change"));
+      };
+
+      actions.appendChild(swapBtn);
+      actions.appendChild(clearBtn);
+      topBar.appendChild(actions);
+      seat.appendChild(topBar);
 
       const slot = document.createElement("div"); slot.className="slot";
       const sel = document.createElement("select");
@@ -324,22 +415,46 @@ function mountGrid(){
       sel.dataset.row=r; sel.dataset.col=c;
 
       const name = document.createElement("div");
-      name.className="slot-name muted"; name.textContent = "Adicionar ";
+      name.className="slot-name muted"; name.textContent = "Adicionar";
+
+      const ptsBadge = document.createElement("div");
+      ptsBadge.className = "seat-pts-badge";
+      ptsBadge.style.display = "none";
+
+      const tagsWrap = document.createElement("div");
+      tagsWrap.className = "seat-tags-micro";
+      tagsWrap.style.display = "none";
+
+      const blockedMsg = document.createElement("div");
+      blockedMsg.className = "seat-blocked-wilson";
+      blockedMsg.style.display = "none";
+      blockedMsg.textContent = "🔒 Wilson (2 lugares)";
 
       sel.addEventListener("change", ()=>{
         const chosen = findAnyCard(sel.value);
-        name.textContent = chosen ? chosen.nome : " Adicionar ";
+        name.textContent = chosen ? chosen.nome : "Adicionar";
+        name.classList.toggle("muted", !chosen);
         refreshSeatSelects();
         updateBusVisualLabels(collectState());
         render();
       });
 
       seat.addEventListener("click", (ev)=>{
-        if(ev.target.tagName.toLowerCase()==="select") return;
+        if(ev.target.closest(".seat-actions")) return;
+        if(pendingSwapSeatNo !== null) {
+          executeSwap(pendingSwapSeatNo, seatNo);
+          return;
+        }
         openPickerForSeat(seatNo);
       });
 
-      slot.appendChild(sel); seat.appendChild(slot); seat.appendChild(name); GRID.appendChild(seat);
+      slot.appendChild(sel);
+      seat.appendChild(slot);
+      seat.appendChild(name);
+      seat.appendChild(ptsBadge);
+      seat.appendChild(tagsWrap);
+      seat.appendChild(blockedMsg);
+      GRID.appendChild(seat);
     }
   }
   refreshSeatSelects();
@@ -534,10 +649,25 @@ function collectState(){
 }
 
 /* ============================
-   BUS VISUAL
+   BUS VISUAL & RADAR DE ADJACÊNCIA
 ============================= */
 const BUS_SEATS = document.getElementById("busVisualSeats");
 let currentBusFocus = null;
+
+function clearNeighborHighlights() {
+  BUS_SEATS.querySelectorAll(".bseat").forEach(b => b.classList.remove("adj-hl"));
+}
+
+function highlightNeighbors(seatNo) {
+  clearNeighborHighlights();
+  const pos = seatNumToRC(seatNo);
+  const nbs = GameLogic.neighbors(pos, ROWS, COLS);
+  nbs.forEach(nb => {
+    const nbSeatNo = nb.row === 0 ? nb.col + 1 : 6 + nb.col + 1;
+    const targetBseat = BUS_SEATS.querySelector(`.bseat[data-seatno="${nbSeatNo}"]`);
+    if (targetBseat) targetBseat.classList.add("adj-hl");
+  });
+}
 
 function mountBusVisual(){
   BUS_SEATS.innerHTML = "";
@@ -546,6 +676,10 @@ function mountBusVisual(){
     b.type="button"; b.className="bseat"; b.textContent = n;
     b.dataset.seatno = n;
     b.addEventListener("click", ()=>{ focusGridSeat(n,true); openPickerForSeat(n); });
+    b.addEventListener("mouseenter", () => highlightNeighbors(n));
+    b.addEventListener("mouseleave", clearNeighborHighlights);
+    b.addEventListener("focus", () => highlightNeighbors(n));
+    b.addEventListener("blur", clearNeighborHighlights);
     BUS_SEATS.appendChild(b);
   }
   document.getElementById("btnVisualHelp").onclick=()=>document.getElementById("visualHelp").classList.toggle("open");
@@ -657,7 +791,66 @@ function render(){
   lines.push(rowLine("[Mão]", breakdown.hand.score, breakdown.hand.detail));
 
   EXPLAIN.innerHTML = lines.join("");
+  updateGridSeatDetails(breakdown.passengers.details, state);
+  saveCurrentMatch();
   if(currentBusFocus) scrollExplainToSeat(currentBusFocus);
+}
+
+function updateGridSeatDetails(passengerDetails, state) {
+  GRID.querySelectorAll(".seat").forEach(seatEl => {
+    const r = +seatEl.dataset.row, c = +seatEl.dataset.col;
+    const seatNo = +seatEl.dataset.seatno;
+    const card = state.grid[r][c].card;
+    const isBlockedWilson = isSeatBlockedByWilson({ row: r, col: c });
+
+    const actions = seatEl.querySelector(".seat-actions");
+    const ptsBadge = seatEl.querySelector(".seat-pts-badge");
+    const tagsWrap = seatEl.querySelector(".seat-tags-micro");
+    const blockedMsg = seatEl.querySelector(".seat-blocked-wilson");
+    const nameEl = seatEl.querySelector(".slot-name");
+
+    if (isBlockedWilson && !card) {
+      seatEl.classList.add("seat-wilson-locked");
+      if (blockedMsg) blockedMsg.style.display = "block";
+      if (nameEl) nameEl.style.display = "none";
+    } else {
+      seatEl.classList.remove("seat-wilson-locked");
+      if (blockedMsg) blockedMsg.style.display = "none";
+      if (nameEl) nameEl.style.display = "block";
+    }
+
+    if (card) {
+      seatEl.classList.add("occupied");
+      if (actions) actions.style.display = "flex";
+
+      const detail = passengerDetails.find(d => d.seatId === seatNo);
+      if (ptsBadge) {
+        ptsBadge.style.display = "inline-flex";
+        if (detail?.inactive) {
+          ptsBadge.textContent = "⚠️ Inativo";
+          ptsBadge.className = "seat-pts-badge warn";
+        } else {
+          const delta = detail ? detail.delta : card.base;
+          ptsBadge.textContent = delta > 0 ? `+${delta} pts` : (delta < 0 ? `${delta} pts` : `0 pts`);
+          ptsBadge.className = "seat-pts-badge " + (delta > 0 ? "good" : (delta < 0 ? "bad" : "neu"));
+        }
+      }
+      if (tagsWrap) {
+        const microTags = [card.faixa, card.temper, card.comp].filter(Boolean);
+        if (microTags.length) {
+          tagsWrap.style.display = "flex";
+          tagsWrap.innerHTML = microTags.map(t => `<span class="micro-tag">${escapeHtml(t)}</span>`).join("");
+        } else {
+          tagsWrap.style.display = "none";
+        }
+      }
+    } else {
+      seatEl.classList.remove("occupied");
+      if (actions) actions.style.display = "none";
+      if (ptsBadge) ptsBadge.style.display = "none";
+      if (tagsWrap) tagsWrap.style.display = "none";
+    }
+  });
 }
 
 function scoreSpan(score){
@@ -981,6 +1174,19 @@ function buildPickerGrid(tab, q){
     return normText.includes(norm(q));
   };
 
+  // Atualiza visibilidade dos botões de abas no picker conforme expansões ativas
+  const cobPill = document.querySelector('.pill[data-tab="cob"]');
+  const apxPill = document.querySelector('.pill[data-tab="apx"]');
+  const estouPill = document.querySelector('.pill[data-tab="estou"]');
+  const lendasPill = document.querySelector('.pill[data-tab="lendas"]');
+  const pagodePill = document.querySelector('.pill[data-tab="pagode"]');
+
+  if(cobPill) cobPill.style.display = EXP_COB.checked ? "" : "none";
+  if(apxPill) apxPill.style.display = EXP_APX.checked ? "" : "none";
+  if(estouPill) estouPill.style.display = EXP_ESTOU_NO_BUSAO.checked ? "" : "none";
+  if(lendasPill) lendasPill.style.display = EXP_LENDAS_URBANAS.checked ? "" : "none";
+  if(pagodePill) pagodePill.style.display = EXP_GRUPO_PAGODE.checked ? "" : "none";
+
   let list=[];
   if(tab==="pass") list = CARD_DB.filter(filter);
   else if(tab==="cob" && EXP_COB.checked) list = COBRADORES.filter(filter);
@@ -990,13 +1196,36 @@ function buildPickerGrid(tab, q){
   else if(tab==="pagode" && EXP_GRUPO_PAGODE.checked) list = GRUPO_PAGODE.filter(filter);
 
   pickerGrid.innerHTML = "";
+  if (!list.length) {
+    pickerGrid.innerHTML = `<div class="muted" style="grid-column:1/-1;padding:16px;text-align:center">Nenhuma carta encontrada para este filtro.</div>`;
+    return;
+  }
+
   list.slice().sort(byName).forEach(card=>{
     const item = document.createElement("div");
     item.className="picker-item";
-    item.innerHTML = `<div class="picker-name">${card.nome}</div><div class="picker-tags">${card.faixa||""} ${card.temper||""} ${card.comp||""}</div>`;
     const {row,col} = seatNumToRC(currentSeatNo);
     const check = checkCardAllowedAt(card,{row,col},state);
-    if(!check.ok){ item.classList.add("disabled"); item.title=check.reason||""; }
+
+    const tags = [card.faixa, card.temper, card.comp].filter(Boolean).join(" • ");
+    const ptsText = card.base !== undefined ? `+${card.base} pts` : "";
+    const effectText = card.text ? escapeHtml(card.text) : "";
+    const reasonHtml = !check.ok ? `<div class="picker-reason">🚫 ${escapeHtml(check.reason || "Não pode embarcar")}</div>` : "";
+
+    item.innerHTML = `
+      <div class="picker-head-line">
+        <div class="picker-name">${escapeHtml(card.nome)}</div>
+        ${ptsText ? `<div class="picker-pts">${ptsText}</div>` : ""}
+      </div>
+      ${tags ? `<div class="picker-tags">${tags}</div>` : ""}
+      ${effectText ? `<div class="picker-effect">${effectText}</div>` : ""}
+      ${reasonHtml}
+    `;
+
+    if(!check.ok){
+      item.classList.add("disabled");
+      item.title=check.reason||"";
+    }
     item.onclick=()=>{
       if(item.classList.contains("disabled")) return;
       const sel = GRID.querySelector(`select.seat-select[data-row="${row}"][data-col="${col}"]`);
@@ -1073,15 +1302,134 @@ function resetRanking(){
   }
 }
 
+function deleteRankingEntry(index) {
+  const arr = getStoredRanking();
+  arr.sort((a,b) => (b.score || 0) - (a.score || 0));
+  if (index >= 0 && index < arr.length) {
+    arr.splice(index, 1);
+    try {
+      localStorage.setItem("busaoRanking", JSON.stringify(arr));
+    } catch (err) {
+      console.error("Falha ao remover item do ranking:", err);
+    }
+    renderRanking();
+  }
+}
+
 function renderRanking(){
   const arr = getStoredRanking();
-  rankTableBody.innerHTML = arr.map((e,i)=>
-    `<tr><td>${i+1}</td><td>${escapeHtml(e.jogador)}</td><td>${escapeHtml(e.motorista)}</td><td>${escapeHtml(e.melhorias)}</td><td class="right">${escapeHtml(e.score)}</td></tr>`
-  ).join("");
+  arr.sort((a,b) => (b.score || 0) - (a.score || 0));
+
+  if (!arr.length) {
+    rankTableBody.innerHTML = `<tr><td colspan="6" class="muted" style="text-align:center;padding:14px">Nenhum registro no ranking ainda.</td></tr>`;
+    return;
+  }
+
+  const medals = ["🥇", "🥈", "🥉"];
+  rankTableBody.innerHTML = arr.map((e,i)=>{
+    const posBadge = medals[i] || `<span class="rank-pos">${i+1}</span>`;
+    return `<tr>
+      <td>${posBadge}</td>
+      <td><strong>${escapeHtml(e.jogador)}</strong></td>
+      <td>${escapeHtml(e.motorista)}</td>
+      <td><small class="muted">${escapeHtml(e.melhorias)}</small></td>
+      <td class="right"><strong>${escapeHtml(e.score)}</strong></td>
+      <td class="right"><button type="button" class="btn ghost sm rank-del-btn" data-index="${i}" title="Remover este registro">🗑️</button></td>
+    </tr>`;
+  }).join("");
+
+  rankTableBody.querySelectorAll(".rank-del-btn").forEach(btn => {
+    btn.onclick = () => {
+      const idx = +btn.dataset.index;
+      deleteRankingEntry(idx);
+    };
+  });
 }
 
 btnSaveScore.onclick = saveScore;
 btnResetRanking.onclick = resetRanking;
+
+/* ============================
+   AUTO-SAVE DA PARTIDA ATUAL
+============================= */
+function saveCurrentMatch() {
+  const rawSeats = [];
+  GRID.querySelectorAll("select.seat-select").forEach(sel => {
+    rawSeats.push({ row: +sel.dataset.row, col: +sel.dataset.col, value: sel.value });
+  });
+  const data = {
+    player: playerNameEl.value,
+    driver: DRIVER_SEL.value,
+    exp: {
+      cob: EXP_COB.checked,
+      apx: EXP_APX.checked,
+      perr: EXP_PERR.checked,
+      estou: EXP_ESTOU_NO_BUSAO.checked,
+      lendas: EXP_LENDAS_URBANAS.checked,
+      pagode: EXP_GRUPO_PAGODE.checked,
+      rotas: EXP_ROTAS_DIARIAS.checked,
+    },
+    improvements: Array.from(selectedImprovementIds),
+    perrengues: Array.from(selectedPerrengueIds),
+    rotasDiarias: Array.from(selectedRotasDiariasIds),
+    hand: handCountEl.value,
+    seats: rawSeats,
+  };
+  try {
+    localStorage.setItem("busaoCurrentMatch", JSON.stringify(data));
+  } catch (e) {
+    console.error("Auto-save falhou:", e);
+  }
+}
+
+function restoreCurrentMatch() {
+  try {
+    const raw = localStorage.getItem("busaoCurrentMatch");
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!data) return false;
+
+    if (data.player) {
+      playerNameEl.value = data.player;
+      playerTagEl.textContent = `Jogador: ${data.player}`;
+    }
+    if (data.exp) {
+      EXP_COB.checked = !!data.exp.cob;
+      EXP_APX.checked = !!data.exp.apx;
+      EXP_PERR.checked = !!data.exp.perr;
+      EXP_ESTOU_NO_BUSAO.checked = !!data.exp.estou;
+      EXP_LENDAS_URBANAS.checked = !!data.exp.lendas;
+      EXP_GRUPO_PAGODE.checked = !!data.exp.pagode;
+      EXP_ROTAS_DIARIAS.checked = !!data.exp.rotas;
+
+      PERR_SECTION.style.display = EXP_PERR.checked ? "block" : "none";
+      ROTAS_DIARIAS_SECTION.style.display = EXP_ROTAS_DIARIAS.checked ? "block" : "none";
+    }
+    if (data.driver) DRIVER_SEL.value = data.driver;
+    if (Array.isArray(data.improvements)) selectedImprovementIds = new Set(data.improvements);
+    if (Array.isArray(data.perrengues)) selectedPerrengueIds = new Set(data.perrengues);
+    if (Array.isArray(data.rotasDiarias)) selectedRotasDiariasIds = new Set(data.rotasDiarias);
+    if (data.hand !== undefined) handCountEl.value = data.hand;
+
+    rebuildSeatSelectOptions();
+    buildImprovementButtons();
+    if (EXP_PERR.checked) buildPerrengueButtons();
+    if (EXP_ROTAS_DIARIAS.checked) buildRotasDiariasButtons();
+
+    if (Array.isArray(data.seats)) {
+      data.seats.forEach(s => {
+        const sel = GRID.querySelector(`select.seat-select[data-row="${s.row}"][data-col="${s.col}"]`);
+        if (sel) sel.value = s.value;
+      });
+    }
+    renderDriverInfo();
+    refreshSeatSelects();
+    return true;
+  } catch (err) {
+    console.error("Restauração falhou:", err);
+    return false;
+  }
+}
 
 /* ============================
    AÇÕES DOS BOTÕES PRINCIPAIS
@@ -1095,6 +1443,11 @@ btnClearSeats.onclick = ()=>{
 
 btnNewRound.onclick = ()=>{
   if(confirm("Deseja limpar toda a configuração (motorista, melhorias, assentos) para uma nova pontuação?")){
+    try {
+      localStorage.removeItem("busaoCurrentMatch");
+    } catch (e) {
+      console.error(e);
+    }
     GRID.querySelectorAll("select.seat-select").forEach(sel=>{ sel.value=""; });
     DRIVER_SEL.value="";
     selectedImprovementIds.clear();
@@ -1111,6 +1464,18 @@ btnNewRound.onclick = ()=>{
     render();
   }
 };
+
+/* Stepper de Cartas na Mão */
+document.getElementById("btnHandMinus")?.addEventListener("click", () => {
+  const v = Math.max(0, (+handCountEl.value || 0) - 1);
+  handCountEl.value = v;
+  render();
+});
+document.getElementById("btnHandPlus")?.addEventListener("click", () => {
+  const v = Math.max(0, (+handCountEl.value || 0) + 1);
+  handCountEl.value = v;
+  render();
+});
 
 /* ============================
    INTEGRAÇÃO DO SCANNER (OCR)
@@ -1299,4 +1664,5 @@ mountGrid();
 mountBusVisual();
 buildCatalog("");
 renderRanking();
+restoreCurrentMatch();
 render();

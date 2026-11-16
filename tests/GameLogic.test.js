@@ -202,4 +202,56 @@ describe('GameLogic', () => {
       expect(result.breakdown.rotasDiarias.score).toBe(3);
     });
   });
+
+  describe('Radar de Adjacência e Swap de Assentos (V2 Evolution)', () => {
+    it('should compute exact neighbor coordinates used by the adjacency radar', () => {
+      // Assento 3 (row 0, col 2) deve ter 5 vizinhos no grid 2x6:
+      // Mesma fileira: col 1 e col 3
+      // Outra fileira (row 1): col 1, col 2, col 3
+      const neighbors = GameLogic.neighbors({ row: 0, col: 2 }, 6);
+      expect(neighbors).toHaveLength(5);
+      expect(neighbors).toEqual(
+        expect.arrayContaining([
+          { row: 0, col: 1 },
+          { row: 0, col: 3 },
+          { row: 1, col: 1 },
+          { row: 1, col: 2 },
+          { row: 1, col: 3 },
+        ])
+      );
+    });
+
+    it('should recalculate adjacency-dependent points accurately when two seats are swapped', () => {
+      const logic = new GameLogic();
+      const cardA = {
+        id: 'admirador',
+        nome: 'Admirador',
+        base: 0,
+        impacto: 'final',
+        ability: (pos, ctx) => ctx.countAdj(pos, c => c.id === 'famoso') * 5
+      };
+      const cardFamoso = { id: 'famoso', nome: 'Famoso', base: 0, impacto: 'final' };
+      const cardNeutro = { id: 'neutro', nome: 'Neutro', base: 0, impacto: 'final' };
+
+      // Estado 1: Admirador na col 0, Famoso na col 1 (adjacentes) -> +5 pts
+      // Neutro longe na col 5
+      const table1 = [
+        { row: 0, col: 0, card: cardA },
+        { row: 0, col: 1, card: cardFamoso },
+        { row: 0, col: 5, card: cardNeutro },
+      ];
+      const res1 = logic.calculate(table1, 0);
+      expect(res1.breakdown.passengers.score).toBe(5);
+
+      // Swap entre col 1 (Famoso) e col 5 (Neutro)
+      // Agora Famoso está longe na col 5 -> 0 pts
+      const table2 = [
+        { row: 0, col: 0, card: cardA },
+        { row: 0, col: 1, card: cardNeutro },
+        { row: 0, col: 5, card: cardFamoso },
+      ];
+      const res2 = logic.calculate(table2, 0);
+      expect(res2.breakdown.passengers.score).toBe(0);
+    });
+  });
 });

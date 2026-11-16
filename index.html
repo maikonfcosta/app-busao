@@ -143,7 +143,12 @@
 
       <div class="section">
         <label for="handCount">Cartas na mão (–1 cada)</label>
-        <input id="handCount" type="number" min="0" step="1" value="0" />
+        <div class="stepper-control">
+          <button type="button" class="btn btn-stepper" id="btnHandMinus" aria-label="Diminuir cartas">−</button>
+          <input id="handCount" type="number" min="0" step="1" value="0" class="input-stepper" />
+          <button type="button" class="btn btn-stepper" id="btnHandPlus" aria-label="Aumentar cartas">+</button>
+        </div>
+        <small class="muted" style="display:block;margin-top:6px">Desconta 1 ponto por carta não jogada (Isabel anula este desconto).</small>
       </div>
     </div>
 
@@ -355,6 +360,7 @@
               <th>Motorista</th>
               <th>Melhorias</th>
               <th class="right">Pontuação</th>
+              <th class="right" style="width:36px"></th>
             </tr>
           </thead>
           <tbody></tbody>
