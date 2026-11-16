@@ -1,7 +1,14 @@
-const CACHE_NAME = 'busao-calc-v3';
+const CACHE_NAME = 'busao-calc-v4';
 const ASSETS = [
   './',
   './index.html',
+  './favicon.ico',
+  './favicon.png',
+  './manifest.json',
+  './assets/img/logo.png',
+  './assets/img/icon-192.png',
+  './assets/img/icon-512.png',
+  './assets/img/apple-touch-icon.png',
   './css/style.css',
   './js/script.js',
   './js/GameLogic.js',
