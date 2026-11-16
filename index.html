@@ -4,6 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Calculadora – Busão (v4.0)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="manifest" href="manifest.json" />
 <link rel="stylesheet" href="css/style.css" />
 <script>
@@ -15,55 +18,104 @@
 <body>
 <div class="wrap">
   <div class="panel" id="leftPanel">
-    <header style="justify-content: space-between;">
-      <h1>Busão – Calculadora</h1>
-      <button id="themeToggle" class="btn ghost" title="Alternar Tema">☀️</button>
+    <header class="app-header">
+      <div class="app-title-group">
+        <span class="route-badge">🚌 Linha 01 • Tabuleiro</span>
+        <h1>Busão – Calculadora</h1>
+      </div>
+      <button id="themeToggle" class="btn ghost theme-toggle-btn" title="Alternar Tema" aria-label="Alternar Tema">☀️</button>
     </header>
 
     <div class="tabs-top">
-      <button class="tabbtn act" data-tab="tab-config">Configuração</button>
-      <button class="tabbtn" data-tab="tab-seats">Assentos</button>
-      <button class="tabbtn" data-tab="tab-catalog">Catálogo</button>
-      <button class="tabbtn" data-tab="tab-regrasfaq">Regras & FAQ</button>
+      <button class="tabbtn act" data-tab="tab-config">⚙️ Configuração</button>
+      <button class="tabbtn" data-tab="tab-seats">💺 Assentos</button>
+      <button class="tabbtn" data-tab="tab-catalog">🃏 Catálogo</button>
+      <button class="tabbtn" data-tab="tab-regrasfaq">📖 Regras & FAQ</button>
     </div>
 
     <div class="tabview act" id="tab-config">
       <div class="section">
         <label for="playerName">Jogador</label>
-        <input id="playerName" placeholder="Nome do jogador" />
+        <input id="playerName" placeholder="Nome do jogador" class="input-modern" />
       </div>
 
       <div class="section">
         <label for="driver">Motorista</label>
-        <select id="driver"></select>
+        <select id="driver" class="select-modern"></select>
         <div id="driverInfo" class="drivers" style="margin-top:10px"></div>
-        <div class="inline">
-          <input type="checkbox" id="expCobradores" />
-          <label for="expCobradores" style="margin:0">Ativar Expansão COBRADORES 💶</label>
-        </div>
-        <div class="inline">
-          <input type="checkbox" id="expApaixonados" />
-          <label for="expApaixonados" style="margin:0">Ativar Expansão: Os Apaixonados 💘</label>
-        </div>
-        <div class="inline">
-          <input type="checkbox" id="expPerrengues" />
-          <label for="expPerrengues" style="margin:0">Ativar Expansão: Perrengues ⚠️</label>
-        </div>
-        <div class="inline">
-          <input type="checkbox" id="expEstouNoBusao" />
-          <label for="expEstouNoBusao" style="margin:0">Ativar Expansão: Estou no busão 👍</label>
-        </div>
-        <div class="inline">
-          <input type="checkbox" id="expLendasUrbanas" />
-          <label for="expLendasUrbanas" style="margin:0">Ativar Expansão: Lendas Urbanas 👻</label>
-        </div>
-        <div class="inline">
-          <input type="checkbox" id="expGrupoPagode" />
-          <label for="expGrupoPagode" style="margin:0">Ativar Expansão: Grupo de Pagode 🎵</label>
-        </div>
-        <div class="inline">
-          <input type="checkbox" id="expRotasDiarias" />
-          <label for="expRotasDiarias" style="margin:0">Ativar Expansão: Rotas Diárias 🚌</label>
+        
+        <span class="label" style="margin-top:14px">Expansões Ativas</span>
+        <div class="expansion-grid">
+          <label class="exp-toggle-card" for="expCobradores">
+            <input type="checkbox" id="expCobradores" />
+            <span class="exp-card-body">
+              <span class="exp-card-icon">💶</span>
+              <span class="exp-card-info">
+                <strong>Cobradores</strong>
+                <small>Habilidades adicionais</small>
+              </span>
+            </span>
+          </label>
+          <label class="exp-toggle-card" for="expApaixonados">
+            <input type="checkbox" id="expApaixonados" />
+            <span class="exp-card-body">
+              <span class="exp-card-icon">💘</span>
+              <span class="exp-card-info">
+                <strong>Apaixonados</strong>
+                <small>Bônus de duplas/grupos</small>
+              </span>
+            </span>
+          </label>
+          <label class="exp-toggle-card" for="expPerrengues">
+            <input type="checkbox" id="expPerrengues" />
+            <span class="exp-card-body">
+              <span class="exp-card-icon">⚠️</span>
+              <span class="exp-card-info">
+                <strong>Perrengues</strong>
+                <small>Desafios para o busão</small>
+              </span>
+            </span>
+          </label>
+          <label class="exp-toggle-card" for="expEstouNoBusao">
+            <input type="checkbox" id="expEstouNoBusao" />
+            <span class="exp-card-body">
+              <span class="exp-card-icon">👍</span>
+              <span class="exp-card-info">
+                <strong>Estou no Busão</strong>
+                <small>Passageiros especiais</small>
+              </span>
+            </span>
+          </label>
+          <label class="exp-toggle-card" for="expLendasUrbanas">
+            <input type="checkbox" id="expLendasUrbanas" />
+            <span class="exp-card-body">
+              <span class="exp-card-icon">👻</span>
+              <span class="exp-card-info">
+                <strong>Lendas Urbanas</strong>
+                <small>Efeitos místicos</small>
+              </span>
+            </span>
+          </label>
+          <label class="exp-toggle-card" for="expGrupoPagode">
+            <input type="checkbox" id="expGrupoPagode" />
+            <span class="exp-card-body">
+              <span class="exp-card-icon">🎵</span>
+              <span class="exp-card-info">
+                <strong>Grupo de Pagode</strong>
+                <small>50 pts com os 5 membros</small>
+              </span>
+            </span>
+          </label>
+          <label class="exp-toggle-card" for="expRotasDiarias">
+            <input type="checkbox" id="expRotasDiarias" />
+            <span class="exp-card-body">
+              <span class="exp-card-icon">🚌</span>
+              <span class="exp-card-info">
+                <strong>Rotas Diárias</strong>
+                <small>Metas por fileira</small>
+              </span>
+            </span>
+          </label>
         </div>
       </div>
 
@@ -243,24 +295,70 @@
     </div>
   </div>
 
-    <div class="panel">
-      <header><h1>Resultado</h1><small id="playerTag"></small></header>
+    <div class="panel" id="rightPanel">
+      <header class="app-header">
+        <div class="app-title-group">
+          <span class="route-badge">📊 Painel de Bordo</span>
+          <h1>Resultado</h1>
+        </div>
+        <small id="playerTag" class="player-tag"></small>
+      </header>
     <div class="section totals">
-      <div class="total"><h3>Total</h3><div id="totalScore" class="v kpi neu">0</div></div>
-      <div class="total"><h3>Quebra</h3>
-        <div class="muted">Passageiros: <b id="sumPassengers">0</b></div>
-        <div class="muted">Motorista: <b id="sumDriver">0</b></div>
-        <div class="muted">Melhorias: <b id="sumImprov">0</b></div>
-        <div class="muted">Perrengues: <b id="sumPerrengues">0</b></div>
-        <div class="muted">Rotas Diárias: <b id="sumRotasDiarias">0</b></div>
-        <div class="muted">Mão: <b id="sumHand">0</b></div>
+      <div class="total hero-total">
+        <span class="total-label">Pontuação Total</span>
+        <div id="totalScore" class="v kpi neu">0</div>
+        <span class="total-sub">Pontos consolidados</span>
+      </div>
+      <div class="total breakdown-container">
+        <span class="total-label">Detalhamento</span>
+        <div class="breakdown-grid">
+          <div class="bk-item">
+            <span class="bk-label">Passageiros</span>
+            <b id="sumPassengers" class="bk-val">0</b>
+          </div>
+          <div class="bk-item">
+            <span class="bk-label">Motorista</span>
+            <b id="sumDriver" class="bk-val">0</b>
+          </div>
+          <div class="bk-item">
+            <span class="bk-label">Melhorias</span>
+            <b id="sumImprov" class="bk-val">0</b>
+          </div>
+          <div class="bk-item">
+            <span class="bk-label">Perrengues</span>
+            <b id="sumPerrengues" class="bk-val">0</b>
+          </div>
+          <div class="bk-item">
+            <span class="bk-label">Rotas Diárias</span>
+            <b id="sumRotasDiarias" class="bk-val">0</b>
+          </div>
+          <div class="bk-item">
+            <span class="bk-label">Cartas na Mão</span>
+            <b id="sumHand" class="bk-val">0</b>
+          </div>
+        </div>
       </div>
     </div>
-    <div class="section" style="padding-top:8px"><span class="label">Explicação por assento</span><div id="warnings" class="muted" style="margin-top:6px"></div><div id="explain" class="explain"></div></div>
+    <div class="section" style="padding-top:10px">
+      <div class="section-title"><span>Explicação por Assento</span></div>
+      <div id="warnings" class="muted" style="margin-top:6px"></div>
+      <div id="explain" class="explain"></div>
+    </div>
     <div class="section">
-      <span class="label">Ranking</span>
+      <div class="section-title"><span>Tabela de Classificação</span></div>
       <div class="table-wrap">
-        <table id="rankTable"><thead><tr><th>#</th><th>Jogador</th><th>Motorista</th><th>Melhorias</th><th class="right">Pontuação</th></tr></thead><tbody></tbody></table>
+        <table id="rankTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Jogador</th>
+              <th>Motorista</th>
+              <th>Melhorias</th>
+              <th class="right">Pontuação</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
     </div>
     <div class="foot">Motorista e melhorias: +1 por ocorrência das subcategorias descritas. Cartas sem exigência de embarque sempre contam para eles.</div>
