@@ -116,7 +116,11 @@ const topViews = {
 };
 topTabBtns.forEach(b=>{
   b.onclick = ()=>{
-    topTabBtns.forEach(x=>x.classList.toggle("act", x===b));
+    topTabBtns.forEach(x=>{
+      const isAct = x===b;
+      x.classList.toggle("act", isAct);
+      x.setAttribute("aria-selected", isAct ? "true" : "false");
+    });
     Object.entries(topViews).forEach(([k,el])=> el.classList.toggle("act", k===b.dataset.tab));
   };
 });
@@ -128,15 +132,13 @@ const itabBtns = Array.from(document.querySelectorAll(".itab"));
 const itabPans = { regras: document.querySelector(".rules-container"), faq: document.getElementById("itab-faq") };
 itabBtns.forEach(b=>{
   b.onclick = ()=>{
-    itabBtns.forEach(x=> x.classList.remove("act"));
-    b.classList.add("act");
+    itabBtns.forEach(x=> {
+      const isAct = x===b;
+      x.classList.toggle("act", isAct);
+      x.setAttribute("aria-selected", isAct ? "true" : "false");
+    });
     Object.entries(itabPans).forEach(([k,el]) => {
       if (el) el.style.display = k === b.dataset.itab ? 'block' : 'none';
-    });
-    itabBtns.forEach(x=> {
-      const isAct = x.classList.contains("act");
-      x.style.borderBottomColor = isAct ? "#60a5fa" : "transparent";
-      x.style.color = isAct ? "#60a5fa" : "#cbd5e1";
     });
   };
 });
@@ -207,12 +209,15 @@ function buildImprovementButtons(){
   IMPROVEMENTS.forEach(imp=>{
     const b = document.createElement("button");
     b.type="button";
-    b.className = "btn btn-toggle btn-pill";
+    const isSel = selectedImprovementIds.has(imp.id);
+    b.className = `btn btn-toggle btn-pill${isSel ? " sel" : ""}`;
+    b.setAttribute("aria-pressed", isSel ? "true" : "false");
     b.textContent = imp.nome;
     b.onclick = ()=>{
       if(selectedImprovementIds.has(imp.id)){
         selectedImprovementIds.delete(imp.id);
         b.classList.remove("sel");
+        b.setAttribute("aria-pressed", "false");
       }else{
         if(selectedImprovementIds.size>=3){
           alert("Você já selecionou 3 melhorias. Desmarque uma para escolher outra.");
@@ -220,6 +225,7 @@ function buildImprovementButtons(){
         }
         selectedImprovementIds.add(imp.id);
         b.classList.add("sel");
+        b.setAttribute("aria-pressed", "true");
       }
       renderImprovInfo();
       refreshSeatSelects();
@@ -250,15 +256,19 @@ function buildPerrengueButtons(){
   PERRENGUES.forEach(perr=>{
     const b = document.createElement("button");
     b.type="button";
-    b.className = "btn btn-toggle btn-pill";
+    const isSel = selectedPerrengueIds.has(perr.id);
+    b.className = `btn btn-toggle btn-pill${isSel ? " sel" : ""}`;
+    b.setAttribute("aria-pressed", isSel ? "true" : "false");
     b.textContent = perr.nome;
     b.onclick = ()=>{
       if(selectedPerrengueIds.has(perr.id)){
         selectedPerrengueIds.delete(perr.id);
         b.classList.remove("sel");
+        b.setAttribute("aria-pressed", "false");
       }else{
         selectedPerrengueIds.add(perr.id);
         b.classList.add("sel");
+        b.setAttribute("aria-pressed", "true");
       }
       renderPerrengueInfo();
       render();
@@ -288,15 +298,19 @@ function buildRotasDiariasButtons(){
   ROTAS_DIARIAS.forEach(rota=>{
     const b = document.createElement("button");
     b.type="button";
-    b.className = "btn btn-toggle btn-pill";
+    const isSel = selectedRotasDiariasIds.has(rota.id);
+    b.className = `btn btn-toggle btn-pill${isSel ? " sel" : ""}`;
+    b.setAttribute("aria-pressed", isSel ? "true" : "false");
     b.textContent = rota.nome;
     b.onclick = ()=>{
       if(selectedRotasDiariasIds.has(rota.id)){
         selectedRotasDiariasIds.delete(rota.id);
         b.classList.remove("sel");
+        b.setAttribute("aria-pressed", "false");
       }else{
         selectedRotasDiariasIds.add(rota.id);
         b.classList.add("sel");
+        b.setAttribute("aria-pressed", "true");
       }
       renderRotasDiariasInfo();
       render();
@@ -366,6 +380,9 @@ function mountGrid(){
       const seat = document.createElement("div");
       seat.className="seat";
       seat.dataset.row=r; seat.dataset.col=c; seat.dataset.seatno=seatNo;
+      seat.setAttribute("role", "button");
+      seat.setAttribute("tabindex", "0");
+      seat.setAttribute("aria-label", `Assento ${seatNo}: Vazio. Pressione Enter para adicionar passageiro.`);
 
       const topBar = document.createElement("div");
       topBar.className = "seat-top-bar";
@@ -383,6 +400,7 @@ function mountGrid(){
       swapBtn.type = "button";
       swapBtn.className = "btn-seat-action seat-swap-btn";
       swapBtn.title = "Trocar de lugar com outro assento";
+      swapBtn.setAttribute("aria-label", `Trocar assento ${seatNo} de lugar com outro assento`);
       swapBtn.textContent = "⇄";
       swapBtn.onclick = (e) => handleSeatSwapClick(seatNo, e);
 
@@ -390,6 +408,7 @@ function mountGrid(){
       clearBtn.type = "button";
       clearBtn.className = "btn-seat-action seat-clear-btn";
       clearBtn.title = "Remover passageiro deste assento";
+      clearBtn.setAttribute("aria-label", `Remover passageiro do assento ${seatNo}`);
       clearBtn.textContent = "✕";
       clearBtn.onclick = (e) => {
         e.stopPropagation();
@@ -434,6 +453,10 @@ function mountGrid(){
         const chosen = findAnyCard(sel.value);
         name.textContent = chosen ? chosen.nome : "Adicionar";
         name.classList.toggle("muted", !chosen);
+        seat.setAttribute("aria-label", chosen
+          ? `Assento ${seatNo}: ${chosen.nome}. Pressione Enter para alterar.`
+          : `Assento ${seatNo}: Vazio. Pressione Enter para adicionar passageiro.`
+        );
         refreshSeatSelects();
         updateBusVisualLabels(collectState());
         render();
@@ -446,6 +469,20 @@ function mountGrid(){
           return;
         }
         openPickerForSeat(seatNo);
+      });
+
+      seat.addEventListener("keydown", (ev)=>{
+        if(ev.target !== seat) return;
+        if(ev.key === "Enter" || ev.key === " ") {
+          ev.preventDefault();
+          if(pendingSwapSeatNo !== null) {
+            executeSwap(pendingSwapSeatNo, seatNo);
+            return;
+          }
+          openPickerForSeat(seatNo);
+        } else if(ev.key === "Escape" && pendingSwapSeatNo !== null) {
+          clearSwapState();
+        }
       });
 
       slot.appendChild(sel);
@@ -932,21 +969,30 @@ document.getElementById("clearCatalogSearch").onclick = ()=>{
   catalogSearchEl.value = "";
   catalogFilters.faixa = null; catalogFilters.temper = null;
   catalogFilters.comp = null; catalogFilters.expansao = null;
-  document.querySelectorAll(".cat-filter-btn.act").forEach(b=>b.classList.remove("act"));
+  document.querySelectorAll(".cat-filter-btn.act").forEach(b=>{
+    b.classList.remove("act");
+    b.setAttribute("aria-pressed", "false");
+  });
   buildCatalog("");
 };
 catalogSearchEl?.addEventListener("input", refreshCatalog);
 
 document.querySelectorAll(".cat-filter-btn").forEach(btn=>{
+  btn.setAttribute("aria-pressed", "false");
   btn.addEventListener("click", ()=>{
     const f = btn.dataset.filter, v = btn.dataset.value;
     if(catalogFilters[f] === v){
       catalogFilters[f] = null;
       btn.classList.remove("act");
+      btn.setAttribute("aria-pressed", "false");
     } else {
-      document.querySelectorAll(`.cat-filter-btn[data-filter="${f}"]`).forEach(b=>b.classList.remove("act"));
+      document.querySelectorAll(`.cat-filter-btn[data-filter="${f}"]`).forEach(b=>{
+        b.classList.remove("act");
+        b.setAttribute("aria-pressed", "false");
+      });
       catalogFilters[f] = v;
       btn.classList.add("act");
+      btn.setAttribute("aria-pressed", "true");
     }
     refreshCatalog();
   });
@@ -1222,6 +1268,12 @@ function buildPickerGrid(tab, q){
       ${reasonHtml}
     `;
 
+    item.setAttribute("role", "button");
+    item.setAttribute("tabindex", check.ok ? "0" : "-1");
+    item.setAttribute("aria-disabled", check.ok ? "false" : "true");
+    const ariaLabel = `${card.nome}${ptsText ? ', ' + ptsText : ''}${tags ? ', tags: ' + tags : ''}.${check.ok ? '' : ' Bloqueado: ' + check.reason}`;
+    item.setAttribute("aria-label", ariaLabel);
+
     if(!check.ok){
       item.classList.add("disabled");
       item.title=check.reason||"";
@@ -1232,6 +1284,12 @@ function buildPickerGrid(tab, q){
       if(sel){ sel.value=card.id; sel.dispatchEvent(new Event("change")); }
       closePicker();
     };
+    item.addEventListener("keydown", (ev)=>{
+      if(ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        item.click();
+      }
+    });
     pickerGrid.appendChild(item);
   });
 }

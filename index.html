@@ -26,11 +26,11 @@
       <button id="themeToggle" class="btn ghost theme-toggle-btn" title="Alternar Tema" aria-label="Alternar Tema">☀️</button>
     </header>
 
-    <div class="tabs-top">
-      <button class="tabbtn act" data-tab="tab-config">⚙️ Configuração</button>
-      <button class="tabbtn" data-tab="tab-seats">💺 Assentos</button>
-      <button class="tabbtn" data-tab="tab-catalog">🃏 Catálogo</button>
-      <button class="tabbtn" data-tab="tab-regrasfaq">📖 Regras & FAQ</button>
+    <div class="tabs-top" role="tablist" aria-label="Abas de Navegação Principal">
+      <button class="tabbtn act" data-tab="tab-config" role="tab" aria-selected="true" aria-controls="tab-config">⚙️ Configuração</button>
+      <button class="tabbtn" data-tab="tab-seats" role="tab" aria-selected="false" aria-controls="tab-seats">💺 Assentos</button>
+      <button class="tabbtn" data-tab="tab-catalog" role="tab" aria-selected="false" aria-controls="tab-catalog">🃏 Catálogo</button>
+      <button class="tabbtn" data-tab="tab-regrasfaq" role="tab" aria-selected="false" aria-controls="tab-regrasfaq">📖 Regras & FAQ</button>
     </div>
 
     <div class="tabview act" id="tab-config">
@@ -248,12 +248,12 @@
     <div class="tabview" id="tab-regrasfaq">
       <div class="section">
         <div class="section-title"><span>Regras & FAQ</span></div>
-        <div class="tabs" style="display:flex;border-bottom:1px solid var(--line)">
-          <div class="itab act" data-itab="regras" style="padding:10px 14px;cursor:pointer;color:#60a5fa;border-bottom:2px solid #60a5fa">Regras (online)</div>
-          <div class="itab" data-itab="faq" style="padding:10px 14px;cursor:pointer;color:#cbd5e1;border-bottom:2px solid transparent">FAQ & Contato</div>
+        <div class="tabs-internal" role="tablist" aria-label="Navegação de Regras e FAQ">
+          <button type="button" class="itab act" data-itab="regras" role="tab" aria-selected="true" aria-controls="rulesContainer" id="tabBtnRegras">Regras (online)</button>
+          <button type="button" class="itab" data-itab="faq" role="tab" aria-selected="false" aria-controls="itab-faq" id="tabBtnFaq">FAQ & Contato</button>
         </div>
       </div>
-      <div class="rules-container">
+      <div class="rules-container" id="rulesContainer" role="tabpanel" aria-labelledby="tabBtnRegras">
         <h1>Regras do Busão</h1>
         <p>Jogo de estratégia e equilíbrio para 2 a 6 jogadores</p>
 
@@ -288,7 +288,7 @@
           </div>
         </details>
       </div>
-      <div class="tabpan" id="itab-faq" style="display: none; padding: 12px;">
+      <div class="tabpan" id="itab-faq" role="tabpanel" aria-labelledby="tabBtnFaq" style="display: none; padding: 12px;">
         <p><b>Perguntas frequentes</b></p>
         <details><summary>Como funciona a adjacência?</summary><div class="muted">Esquerda/direita + 3 da outra fileira (motorista não conta).</div></details>
         <details><summary>"Entre ele e o motorista" (Motolover)</summary><div class="muted">Conta todos nas colunas à esquerda (duas fileiras).</div></details>
@@ -311,7 +311,7 @@
     <div class="section totals">
       <div class="total hero-total">
         <span class="total-label">Pontuação Total</span>
-        <div id="totalScore" class="v kpi neu">0</div>
+        <div id="totalScore" class="v kpi neu" aria-live="polite">0</div>
         <span class="total-sub">Pontos consolidados</span>
       </div>
       <div class="total breakdown-container">
@@ -346,7 +346,7 @@
     </div>
     <div class="section" style="padding-top:10px">
       <div class="section-title"><span>Explicação por Assento</span></div>
-      <div id="warnings" class="muted" style="margin-top:6px"></div>
+      <div id="warnings" class="muted" style="margin-top:6px" aria-live="polite"></div>
       <div id="explain" class="explain"></div>
     </div>
     <div class="section">

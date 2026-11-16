@@ -4,6 +4,7 @@
   "description": "![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow)",
   "main": "index.js",
   "scripts": {
+    "start": "python -m http.server 3000",
     "test": "jest",
     "lint": "eslint \"js/**/*.js\" \"src/**/*.js\"",
     "format": "prettier --write \"js/**/*.js\" \"src/**/*.js\""
