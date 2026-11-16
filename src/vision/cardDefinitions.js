@@ -148,6 +148,9 @@ function _ocrNormalize(s) {
  * @returns {number}
  */
 function _levenshtein(a, b) {
+  if (typeof levenshteinDistance === 'function') {
+    return levenshteinDistance(a, b);
+  }
   if (a === b) return 0;
   if (a.length === 0) return b.length;
   if (b.length === 0) return a.length;

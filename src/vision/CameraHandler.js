@@ -98,19 +98,24 @@ class CameraHandler {
     if (CameraHandler._workerInitPromise) return CameraHandler._workerInitPromise;
     
     CameraHandler._workerInitPromise = (async () => {
-      report('Inicializando Inteligência Artificial...');
-      const worker = await Tesseract.createWorker('por', 1, {
-        logger: m => {
-          if (m.status === 'recognizing text') return;
-          if (m.status.includes('loading') || m.status.includes('downloading')) {
-            report(`Baixando motor OCR: ${Math.round(m.progress * 100)}%`);
-          } else if (m.status === 'initializing api') {
-            report('Iniciando OCR...');
+      try {
+        report('Inicializando Inteligência Artificial...');
+        const worker = await Tesseract.createWorker('por', 1, {
+          logger: m => {
+            if (m.status === 'recognizing text') return;
+            if (m.status.includes('loading') || m.status.includes('downloading')) {
+              report(`Baixando motor OCR: ${Math.round(m.progress * 100)}%`);
+            } else if (m.status === 'initializing api') {
+              report('Iniciando OCR...');
+            }
           }
-        }
-      });
-      CameraHandler._tesseractWorker = worker;
-      return worker;
+        });
+        CameraHandler._tesseractWorker = worker;
+        return worker;
+      } catch (err) {
+        CameraHandler._workerInitPromise = null;
+        throw err;
+      }
     })();
     return CameraHandler._workerInitPromise;
   }

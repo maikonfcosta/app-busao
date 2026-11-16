@@ -46,9 +46,10 @@ const btnShareScore = document.getElementById("btnShareScore");
 // Compartilhar Placar
 btnShareScore?.addEventListener("click", () => {
   const panel = document.querySelectorAll(".panel")[1]; // Painel de Resultado
-  if (window.html2canvas) {
+  if (window.html2canvas && panel) {
     btnShareScore.textContent = "Gerando...";
-    html2canvas(panel, { backgroundColor: '#0f172a' }).then(canvas => {
+    const bgCol = window.getComputedStyle(panel).backgroundColor || (document.documentElement.dataset.theme === 'light' ? '#ffffff' : '#0f172a');
+    html2canvas(panel, { backgroundColor: bgCol }).then(canvas => {
       const link = document.createElement('a');
       link.download = 'placar-busao.png';
       link.href = canvas.toDataURL();
@@ -485,7 +486,7 @@ function checkCardAllowedAt(card, pos, state){
   }
 
   if(card.isCobrador && hasCobradorElsewhere(state, pos)){
-    return {ok:false, reason:"Sô é permitido 1 cobrador por ônibus."};
+    return {ok:false, reason:"Só é permitido 1 cobrador por ônibus."};
   }
 
   if(typeof card.require === "function"){
@@ -505,100 +506,16 @@ function checkCardAllowedAt(card, pos, state){
 /* ============================
    CONTEXTO (cartas ativas)
 ============================= */
-function neighbors(pos){
-  const out=[];
-  if(pos.col-1>=0) out.push({row:pos.row,col:pos.col-1});
-  if(pos.col+1<COLS) out.push({row:pos.row,col:pos.col+1});
-  const other = pos.row===0?1:0;
-  for(let dc=-1; dc<=1; dc++){
-    const cc = pos.col+dc;
-    if(cc>=0 && cc<COLS) out.push({row:other,col:cc});
-  }
-  return out;
-}
-
 function buildCtx(state){
-  const warnings = [];
-  const memo = new Map();
-  const key = (r,c)=> `${r},${c}`;
-  const getPos = (r,c)=> state.grid[r][c];
-
-  function isActiveAt(pos){
-    const k = key(pos.row,pos.col);
-    if(memo.has(k)) return memo.get(k);
-    const card = getPos(pos.row,pos.col).card;
-    let ok = false;
-    if(card){
-      if(typeof card.require === "function"){
-        const proxy = {
-          grid: state.grid,
-          improvements: state.improvements,
-          driver: state.driver,
-          hasImprovement: (name)=> state.improvements.some(i=>i.nome===name),
-          getPos,
-          countBus: (pred)=> countBusActive(pred),
-          countAdj: (p,pred)=> countAdjActive(p,pred),
-          countAdjEmpty: (p)=> countAdjEmptyActive(p),
-          countAheadBothRows: (p)=> countAheadBothRowsActive(p),
-          existsId: (id)=> existsIdActive(id),
-          isActiveAt: (p)=> isActiveAt(p),
-        };
-        try{ ok = !!card.require(proxy, pos)?.ok; }catch{ ok = false; }
-      }else{
-        ok = true;
-      }
-    }
-    memo.set(k, ok);
-    return ok;
-  }
-
-  function forEachActive(fn){
-    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
-      const card = state.grid[r][c].card;
-      if(card && isActiveAt({row:r,col:c})) fn({row:r,col:c}, card);
-    }
-  }
-
-  function countBusActive(pred){ let n=0; forEachActive((p,card)=>{ if(pred(card,p)) n++; }); return n; }
-
-
-  function countAdjActive(pos,pred){
-    let n=0; for(const nb of neighbors(pos)){ const card = state.grid[nb.row][nb.col].card; if(card && isActiveAt(nb) && pred(card, nb)) n++; } return n;
-  }
-
-  function countAdjEmptyActive(pos){
-    let n=0; for(const nb of neighbors(pos)){ const card = state.grid[nb.row][nb.col].card; if(!card || !isActiveAt(nb)) n++; } return n;
-  }
-
-  function countAheadBothRowsActive(pos){
-    let n=0; for(let c=0;c<pos.col;c++){
-      const a = {row:0,col:c}, b={row:1,col:c};
-      if(state.grid[a.row][a.col].card && isActiveAt(a)) n++;
-      if(state.grid[b.row][b.col].card && isActiveAt(b)) n++;
-    } return n;
-  }
-
-  function existsIdActive(id){ let found=false; forEachActive((_p,c)=>{ if(c.id===id) found=true; }); return found; }
-
-  const ctx = {
-    grid: state.grid,
-    improvements: state.improvements,
+  const logic = new GameLogic({
     driver: state.driver,
+    improvements: state.improvements,
     perrengues: state.perrengues,
     rotasDiarias: state.rotasDiarias,
-    warn: (msg)=>warnings.push(msg),
-    hasImprovement: (name)=> state.improvements.some(i=>i.nome===name),
-    existsId: existsIdActive,
-    getPos,
-    forEachCard: forEachActive,
-    countBus: (pred)=> countBusActive(pred),
-    countAdj: (pos,pred)=> countAdjActive(pos,pred),
-    countAdjEmpty: (pos)=> countAdjEmptyActive(pos),
-    countAheadBothRows: (pos)=> countAheadBothRowsActive(pos),
-    neighbors,
-    isActiveAt,
-  };
-  return {ctx, warnings, isActiveAt};
+    rows: ROWS,
+    cols: COLS,
+  });
+  return logic.buildCtx(state);
 }
 
 function collectState(){
@@ -646,8 +563,6 @@ function updateBusVisualLabels(state){
     el.classList.toggle("occ", !!card);
   });
 }
-
-function seatNumber(pos){ return pos.row===0 ? (pos.col+1) : (6+pos.col+1); }
 
 function focusGridSeat(n, fromBus=false){
   const {row,col} = seatNumToRC(n);
@@ -1032,7 +947,6 @@ function buildCatalog(q){
 ============================= */
 const pickerModal = document.getElementById("pickerModal");
 const pickerGrid = document.getElementById("pickerGrid");
-const pickerTitle = document.getElementById("pickerTitle");
 const pickerSeatLabel = document.getElementById("pickerSeatLabel");
 const pickerSearch = document.getElementById("pickerSearch");
 const pickerClear = document.getElementById("pickerClear");
@@ -1109,32 +1023,60 @@ pickerSearch.addEventListener("input", ()=>{
 /* ============================
    RANKING (localStorage)
 ============================= */
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function getStoredRanking() {
+  try {
+    const raw = localStorage.getItem("busaoRanking");
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    console.error("Falha ao ler ranking do localStorage:", err);
+    return [];
+  }
+}
+
 function saveScore(){
   const state=collectState();
   const total=+totalScoreEl.textContent;
   const entry={
-    jogador: playerNameEl.value||"—",
-    motorista: state.driver? state.driver.nome : "—",
-    melhorias: state.improvements.map(i=>i.nome).join(", "),
+    jogador: playerNameEl.value.trim() || "—",
+    motorista: state.driver ? state.driver.nome : "—",
+    melhorias: state.improvements.map(i=>i.nome).join(", ") || "—",
     score: total
   };
-  const arr = JSON.parse(localStorage.getItem("busaoRanking")||"[]");
+  const arr = getStoredRanking();
   arr.push(entry);
-  localStorage.setItem("busaoRanking", JSON.stringify(arr));
+  try {
+    localStorage.setItem("busaoRanking", JSON.stringify(arr));
+  } catch (err) {
+    console.error("Falha ao salvar ranking no localStorage:", err);
+  }
   renderRanking();
 }
 
 function resetRanking(){
   if(confirm("Deseja realmente zerar o ranking?")){
-    localStorage.removeItem("busaoRanking");
+    try {
+      localStorage.removeItem("busaoRanking");
+    } catch (err) {
+      console.error(err);
+    }
     renderRanking();
   }
 }
 
 function renderRanking(){
-  const arr = JSON.parse(localStorage.getItem("busaoRanking")||"[]");
+  const arr = getStoredRanking();
   rankTableBody.innerHTML = arr.map((e,i)=>
-    `<tr><td>${i+1}</td><td>${e.jogador}</td><td>${e.motorista}</td><td>${e.melhorias}</td><td class="right">${e.score}</td></tr>`
+    `<tr><td>${i+1}</td><td>${escapeHtml(e.jogador)}</td><td>${escapeHtml(e.motorista)}</td><td>${escapeHtml(e.melhorias)}</td><td class="right">${escapeHtml(e.score)}</td></tr>`
   ).join("");
 }
 
@@ -1202,15 +1144,20 @@ function processScanResult(data, confirmEl, onConfirm) {
   })).filter(x => x.card);
 
   // ── Calcular pontuação via GameLogic ────────────────────────────
+  const hand = Math.max(0, +handCountEl.value || 0);
   const logic = new GameLogic({
     driver,
     improvements,
     perrengues:   perrengueObj ? [perrengueObj] : [],
     rotasDiarias: rotaObj      ? [rotaObj]      : [],
+    expansions: {
+      apaixonados: EXP_APX.checked || passMatches.some(m => APAIXONADOS.some(a => a.id === m.id)),
+      grupoPagode: EXP_GRUPO_PAGODE.checked || passMatches.some(m => GRUPO_PAGODE.some(g => g.id === m.id)),
+    },
     rows: ROWS,
     cols: COLS,
   });
-  const result = logic.calculate(tableCards, 0);
+  const result = logic.calculate(tableCards, hand);
   const bd     = result.breakdown;
 
   // ── Montar Recibo de Viagem ──────────────────────────────────────
@@ -1252,7 +1199,7 @@ function processScanResult(data, confirmEl, onConfirm) {
   confirmEl.innerHTML = `
     <div class="recibo-viagem">
       <div class="recibo-total">
-        <span class="recibo-total-label">Pontuacao estimada</span>
+        <span class="recibo-total-label">Pontuação estimada</span>
         <span class="recibo-total-num">${result.total}</span>
       </div>
       <div class="recibo-breakdown">${reciboHtml}</div>
@@ -1274,6 +1221,29 @@ function processScanResult(data, confirmEl, onConfirm) {
  * e dispara render().
  */
 function _applyScanToState(driver, improvements, perrengueObj, rotaObj, passMatches) {
+  // ── Auto-ativar expansões detectadas nas cartas escaneadas ──
+  const matchedCards = passMatches.map(m => findAnyCard(m.id)).filter(Boolean);
+
+  if (matchedCards.some(c => c.isCobrador)) EXP_COB.checked = true;
+  if (matchedCards.some(c => c.isApaixonado)) EXP_APX.checked = true;
+  if (matchedCards.some(c => ESTOU_NO_BUSAO.some(e => e.id === c.id))) EXP_ESTOU_NO_BUSAO.checked = true;
+  if (matchedCards.some(c => LENDAS_URBANAS.some(l => l.id === c.id))) EXP_LENDAS_URBANAS.checked = true;
+  if (matchedCards.some(c => GRUPO_PAGODE.some(g => g.id === c.id))) EXP_GRUPO_PAGODE.checked = true;
+
+  if (perrengueObj) {
+    EXP_PERR.checked = true;
+    PERR_SECTION.style.display = "block";
+    buildPerrengueButtons();
+  }
+  if (rotaObj) {
+    EXP_ROTAS_DIARIAS.checked = true;
+    ROTAS_DIARIAS_SECTION.style.display = "block";
+    buildRotasDiariasButtons();
+  }
+
+  // Reconstruir opções dos assentos com as expansões agora ativadas
+  rebuildSeatSelectOptions();
+
   // ── Motorista ──
   if (driver) { DRIVER_SEL.value = driver.id; renderDriverInfo(); }
 

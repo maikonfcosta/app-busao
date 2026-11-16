@@ -101,7 +101,7 @@
           <span>Selecione o Assento</span>
           <button id="btnVisualHelp" class="btn ghost sm" title="Ajuda de adjacência">?</button>
         </div>
-        <div class="section-sub">Clique no assento correspondente e escolha o personagem, o calculo é automatizado após escolher os assentos válidos..</div>
+        <div class="section-sub">Clique no assento correspondente e escolha o personagem, o cálculo é automatizado após escolher os assentos válidos.</div>
         <div id="visualHelp" class="popover">
           <b>Adjacência:</b> esquerda/direita, cima/baixo, diagonais. Ex.: Assento 3 → adjacentes: 2, 4, 8, 9, 10.
         </div>
@@ -371,9 +371,9 @@
 <!-- cardDefinitions.js: coordenadas de zona do playmat + matchCardsInZone() -->
 <script src="src/vision/cardDefinitions.js"></script>
 <!-- Tesseract.js: OCR para detecção de cartas via câmera -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <!-- html2canvas: exportação de imagem do placar -->
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <!-- CameraHandler.js: acesso à câmera + scanZonas() -->
 <script src="src/vision/CameraHandler.js"></script>
 <script>
@@ -613,6 +613,7 @@
     // ── Abrir scanner: exibe o gate de Melhorias antes da câmera ──
     function openScanner() {
       overlay.showModal();
+      window.addEventListener('resize', updateOrientationWarning);
       gateEl.hidden     = false;
       container.hidden  = true;
       captureBtn.hidden = true;

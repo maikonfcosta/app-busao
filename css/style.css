@@ -490,7 +490,6 @@ dialog.modal[open]{display:flex}
   header h1{font-size:15px}
   .total .v{font-size:24px}
 }
-}
 
 /* ======= THEME TOGGLE (LIGHT MODE) ======= */
 :root[data-theme="light"] {
@@ -507,17 +506,26 @@ dialog.modal[open]{display:flex}
 :root[data-theme="light"] .btn.accent, :root[data-theme="light"] .btn.acc { background: var(--accent); color: #fff; border-color: var(--accent-2); }
 :root[data-theme="light"] .btn.warn { background: #fee2e2; color: #991b1b; border-color: #f87171; }
 :root[data-theme="light"] .btn.ghost { background: transparent; border-color: transparent; }
+:root[data-theme="light"] .chip { background: var(--chip); color: var(--text); border-color: var(--line2); }
 :root[data-theme="light"] .seat { background: #f8fafc; border-color: var(--line2); }
-:root[data-theme="light"] .total { background: #f8fafc; }
+:root[data-theme="light"] .total { background: #f8fafc; border-color: var(--line2); }
 :root[data-theme="light"] .row.hl { background: #eff6ff; }
-:root[data-theme="light"] .catalog { background: #f8fafc; }
+:root[data-theme="light"] .catalog { background: #f8fafc; border-color: var(--line2); }
 :root[data-theme="light"] .cat-item { background: #fff; border-color: var(--line2); }
+:root[data-theme="light"] .cat-pts, :root[data-theme="light"] .cat-text { color: var(--text); }
 :root[data-theme="light"] .cat-filter-btn { background: #fff; color: var(--text); border-color: var(--line2); }
 :root[data-theme="light"] .cat-filter-btn.act { background: var(--accent); color: #fff; border-color: var(--accent-2); }
 :root[data-theme="light"] .popover { background: #fff; border-color: var(--line2); color: var(--text); }
 :root[data-theme="light"] dialog.modal .modal-card { background: #f8fafc; }
 :root[data-theme="light"] .picker-item { background: #fff; border-color: var(--line2); }
 :root[data-theme="light"] .picker-name { color: var(--text); }
+:root[data-theme="light"] #pickerTitle { color: var(--text); }
+:root[data-theme="light"] .pill { background: #fff; color: var(--text); border-color: var(--line2); }
+:root[data-theme="light"] .pill.act { background: var(--accent); color: #fff; }
+:root[data-theme="light"] .section-title { color: var(--text); }
+:root[data-theme="light"] .rules-container .quick-summary { background: var(--card); color: var(--text); border-color: var(--line2); }
+:root[data-theme="light"] .rules-container summary { color: var(--text); }
+:root[data-theme="light"] #itab-faq summary { color: var(--text); }
 :root[data-theme="light"] #pickerTitle { color: var(--text); }
 :root[data-theme="light"] .pill { background: #fff; color: var(--text); border-color: var(--line2); }
 :root[data-theme="light"] .pill.act { background: var(--accent); color: #fff; }

@@ -108,16 +108,20 @@ class GameLogic {
     };
   }
 
-  _neighbors(pos) {
+  static neighbors(pos, _rows = 2, cols = 6) {
     const out = [];
     if (pos.col - 1 >= 0)         out.push({ row: pos.row,           col: pos.col - 1 });
-    if (pos.col + 1 < this.cols)  out.push({ row: pos.row,           col: pos.col + 1 });
+    if (pos.col + 1 < cols)       out.push({ row: pos.row,           col: pos.col + 1 });
     const other = pos.row === 0 ? 1 : 0;
     for (let dc = -1; dc <= 1; dc++) {
       const cc = pos.col + dc;
-      if (cc >= 0 && cc < this.cols) out.push({ row: other, col: cc });
+      if (cc >= 0 && cc < cols) out.push({ row: other, col: cc });
     }
     return out;
+  }
+
+  _neighbors(pos) {
+    return GameLogic.neighbors(pos, this.rows, this.cols);
   }
 
   _seatNumber(pos) {
@@ -127,6 +131,10 @@ class GameLogic {
   /* ============================
      CONTEXTO DE AVALIAÇÃO
   ============================= */
+
+  buildCtx(state) {
+    return this._buildCtx(state);
+  }
 
   _buildCtx(state) {
     const warnings = [];
@@ -143,6 +151,7 @@ class GameLogic {
       let ok = false;
       if (card) {
         if (typeof card.require === 'function') {
+          memo.set(k, false); // Guarda contra recursão infinita cíclica
           const proxy = {
             grid: state.grid,
             improvements: state.improvements,
@@ -176,7 +185,17 @@ class GameLogic {
 
     const countBusActive          = (pred)       => { let n = 0; forEachActive((p, c) => { if (pred(c, p)) n++; }); return n; };
     const countAdjActive          = (pos, pred)  => { let n = 0; for (const nb of neighbors(pos)) { const c = state.grid[nb.row][nb.col].card; if (c && isActiveAt(nb) && pred(c, nb)) n++; } return n; };
-    const countAdjEmptyActive     = (pos)        => { let n = 0; for (const nb of neighbors(pos)) { const c = state.grid[nb.row][nb.col].card; if (!c || !isActiveAt(nb)) n++; } return n; };
+    const countAdjEmptyActive     = (pos)        => {
+      let n = 0;
+      for (const nb of neighbors(pos)) {
+        const c = state.grid[nb.row][nb.col].card;
+        const otherR = nb.row === 0 ? 1 : 0;
+        const otherCard = state.grid[otherR][nb.col].card;
+        const isWilsonOther = otherCard?.id === 'wilson' && isActiveAt({ row: otherR, col: nb.col });
+        if ((!c || !isActiveAt(nb)) && !isWilsonOther) n++;
+      }
+      return n;
+    };
     const countAheadBothRowsActive = (pos)       => {
       let n = 0;
       for (let c = 0; c < pos.col; c++) {
@@ -259,31 +278,47 @@ class GameLogic {
      PONTUAÇÃO — MATEUS (CORINGA)
   ============================= */
 
-  _calculateMateusBonus(state) {
+  _calculateMateusBonus(state, ctx) {
     const TAG_CATEGORIES = {
       faixa:  ['Idoso', 'Adulto', 'Jovem'],
       temper: ['Caótico', 'Equilibrado', 'Tranquilo'],
       comp:   ['Barulhento', 'Comunicativo', 'Silencioso'],
     };
     const allTags   = Object.values(TAG_CATEGORIES).flat();
-    const tagPoints = Object.fromEntries(allTags.map(tag => [tag, 0]));
+    const driverPoints = Object.fromEntries(allTags.map(tag => [tag, 0]));
+    const improvPoints = Object.fromEntries(allTags.map(tag => [tag, 0]));
 
     if (state.driver) {
-      state.driver.bonus.forEach(tag => { if (tag in tagPoints) tagPoints[tag]++; });
+      state.driver.bonus.forEach(tag => { if (tag in driverPoints) driverPoints[tag]++; });
     }
-    if (!state.grid.flat().some(cell => cell.card?.id === 'dona_fausta')) {
+    const faustaPresente = ctx ? ctx.existsId('dona_fausta') : state.grid.flat().some(cell => cell.card?.id === 'dona_fausta');
+    if (!faustaPresente) {
       state.improvements.forEach(imp => {
-        imp.bonus.forEach(tag => { if (tag in tagPoints) tagPoints[tag]++; });
+        imp.bonus.forEach(tag => { if (tag in improvPoints) improvPoints[tag]++; });
       });
     }
+
+    const vovoMichel = ctx ? ctx.existsId('vovo_michel') : state.grid.flat().some(cell => cell.card?.id === 'vovo_michel');
 
     let totalBonus = 0;
     const breakdownParts = [];
     for (const tags of Object.values(TAG_CATEGORIES)) {
-      let bestTag = tags[0], maxPoints = 0;
-      tags.forEach(tag => { if (tagPoints[tag] > maxPoints) { maxPoints = tagPoints[tag]; bestTag = tag; } });
-      totalBonus += maxPoints;
-      breakdownParts.push(`${bestTag} (+${maxPoints})`);
+      let bestTag = tags[0], maxTagTotal = 0, bestDriver = 0, bestImprov = 0;
+      tags.forEach(tag => {
+        const dPts = driverPoints[tag];
+        const iPts = improvPoints[tag];
+        const tPts = dPts + iPts;
+        if (tPts > maxTagTotal) {
+          maxTagTotal = tPts;
+          bestTag = tag;
+          bestDriver = dPts;
+          bestImprov = iPts;
+        }
+      });
+      const effectiveDriver = vovoMichel ? bestDriver * 2 : bestDriver;
+      const effectivePts = effectiveDriver + bestImprov;
+      totalBonus += effectivePts;
+      breakdownParts.push(`${bestTag} (+${effectivePts})`);
     }
     return { score: totalBonus, breakdown: breakdownParts.join(' • ') };
   }
@@ -405,10 +440,12 @@ class GameLogic {
 
   _grupoPagodeBonus(state, ctx) {
     if (!this.expansions.grupoPagode) return { score: 0, note: '' };
-    const pagodeiros = [];
-    // GRUPO_PAGODE é global definida em script.js
-    ctx.forEachCard((_p, c) => { if (GRUPO_PAGODE.some(g => g.id === c.id)) pagodeiros.push(c); });
-    if (pagodeiros.length === 5) return { score: 50, note: 'Grupo de Pagode completo! +50 pontos extras!' };
+    const PAGODE_IDS = ['dudu', 'zeca', 'thiago', 'arlindo', 'xande'];
+    const encontrados = new Set();
+    ctx.forEachCard((_p, c) => {
+      if (c && PAGODE_IDS.includes(c.id)) encontrados.add(c.id);
+    });
+    if (encontrados.size === 5) return { score: 50, note: 'Grupo de Pagode completo! +50 pontos extras!' };
     return { score: 0, note: '' };
   }
 
@@ -459,7 +496,7 @@ class GameLogic {
 
         // Mateus (O Coringa)
         if (card.id === 'mateus') {
-          const mateusBonus = this._calculateMateusBonus(state);
+          const mateusBonus = this._calculateMateusBonus(state, ctx);
           const score = card.base + mateusBonus.score;
           details.push({ who, delta: score, seatId, cardInfo: this._cardInfo(card), mateusBonus });
           passengersScore += score;

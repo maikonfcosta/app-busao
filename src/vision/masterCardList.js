@@ -6,7 +6,7 @@
    Expõe: globalThis.ALL_AVAILABLE_CARDS
 ============================= */
 
-/* eslint-disable no-undef */
+
 
 /**
  * Todas as cartas disponíveis no jogo, incluindo expansões.
