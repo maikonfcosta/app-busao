@@ -7,6 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/x-icon" href="favicon.ico" />
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="assets/img/apple-touch-icon.png" />
+<meta name="theme-color" content="#070b16" />
 <link rel="manifest" href="manifest.json" />
 <link rel="stylesheet" href="css/style.css" />
 <script>
@@ -19,9 +23,12 @@
 <div class="wrap">
   <div class="panel" id="leftPanel">
     <header class="app-header">
-      <div class="app-title-group">
-        <span class="route-badge">🚌 Linha 01 • Tabuleiro</span>
-        <h1>Busão – Calculadora</h1>
+      <div class="app-title-group" style="display:flex;align-items:center;gap:10px;flex-direction:row">
+        <img src="assets/img/logo.png" alt="Logotipo Busão" class="app-logo" style="height:38px;width:auto;border-radius:6px;object-fit:contain" />
+        <div>
+          <span class="route-badge">🚌 Linha 01 • Tabuleiro</span>
+          <h1 style="font-size:17px;line-height:1.2;margin:0">Busão – Calculadora</h1>
+        </div>
       </div>
       <button id="themeToggle" class="btn ghost theme-toggle-btn" title="Alternar Tema" aria-label="Alternar Tema">☀️</button>
     </header>
