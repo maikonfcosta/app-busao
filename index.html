@@ -4,12 +4,21 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Calculadora – Busão (v4.0)</title>
+<link rel="manifest" href="manifest.json" />
 <link rel="stylesheet" href="css/style.css" />
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(err => console.log('SW falhou', err));
+  }
+</script>
 </head>
 <body>
 <div class="wrap">
   <div class="panel" id="leftPanel">
-    <header><h1>Busão – Calculadora</h1></header>
+    <header style="justify-content: space-between;">
+      <h1>Busão – Calculadora</h1>
+      <button id="themeToggle" class="btn ghost" title="Alternar Tema">☀️</button>
+    </header>
 
     <div class="tabs-top">
       <button class="tabbtn act" data-tab="tab-config">Configuração</button>
@@ -92,7 +101,7 @@
           <span>Selecione o Assento</span>
           <button id="btnVisualHelp" class="btn ghost sm" title="Ajuda de adjacência">?</button>
         </div>
-        <div class="section-sub">Clique no assento correspondente e escolha o personagem, o calculo é automatizado após escolher os assentos válidos..</div>
+        <div class="section-sub">Clique no assento correspondente e escolha o personagem, o cálculo é automatizado após escolher os assentos válidos.</div>
         <div id="visualHelp" class="popover">
           <b>Adjacência:</b> esquerda/direita, cima/baixo, diagonais. Ex.: Assento 3 → adjacentes: 2, 4, 8, 9, 10.
         </div>
@@ -120,6 +129,7 @@
         <span class="label">Salvar no Ranking</span>
         <div class="bar" style="margin-bottom:8px">
           <button class="btn accent" id="btnSaveScore">Salvar pontuação</button>
+          <button class="btn accent" id="btnShareScore">Compartilhar Placar 📸</button>
           <button class="btn warn" id="btnResetRanking">Zerar ranking</button>
         </div>
         <div class="muted">Pontuações salvas no seu navegador (localStorage).</div>
@@ -233,8 +243,8 @@
     </div>
   </div>
 
-  <div class="panel">
-    <header><h1>Resultado</h1><small id="playerTag"></small></header>
+    <div class="panel">
+      <header><h1>Resultado</h1><small id="playerTag"></small></header>
     <div class="section totals">
       <div class="total"><h3>Total</h3><div id="totalScore" class="v kpi neu">0</div></div>
       <div class="total"><h3>Quebra</h3>
@@ -361,7 +371,9 @@
 <!-- cardDefinitions.js: coordenadas de zona do playmat + matchCardsInZone() -->
 <script src="src/vision/cardDefinitions.js"></script>
 <!-- Tesseract.js: OCR para detecção de cartas via câmera -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<!-- html2canvas: exportação de imagem do placar -->
+<script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <!-- CameraHandler.js: acesso à câmera + scanZonas() -->
 <script src="src/vision/CameraHandler.js"></script>
 <script>
@@ -601,6 +613,7 @@
     // ── Abrir scanner: exibe o gate de Melhorias antes da câmera ──
     function openScanner() {
       overlay.showModal();
+      window.addEventListener('resize', updateOrientationWarning);
       gateEl.hidden     = false;
       container.hidden  = true;
       captureBtn.hidden = true;

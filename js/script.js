@@ -129,7 +129,7 @@ function _clusterSize(ctx, startRow, startCol, predicate) {
       const key = `${nb.row},${nb.col}`;
       if (!visited.has(key)) {
         const nbCard = ctx.grid[nb.row][nb.col].card;
-        if (nbCard && predicate(nbCard)) {
+        if (nbCard && ctx.isActiveAt(nb) && predicate(nbCard)) {
           visited.add(key);
           queue.push(nb);
         }
@@ -151,7 +151,7 @@ function _maxConnectedCluster(ctx, predicate) {
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const card = ctx.grid[r][c].card;
-      if (!card || !predicate(card)) continue;
+      if (!card || !ctx.isActiveAt({row:r, col:c}) || !predicate(card)) continue;
       const count = _clusterSize(ctx, r, c, predicate);
       if (count > maxAdj) maxAdj = count;
     }
@@ -243,7 +243,15 @@ const ROTAS_DIARIAS = [
     pontos: 8,
     condicao: (ctx) => {
       let vazios = 0;
-      for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(!ctx.grid[r][c].card) vazios++;
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const card = ctx.grid[r][c].card;
+          const otherR = r === 0 ? 1 : 0;
+          const otherCard = ctx.grid[otherR][c].card;
+          const isWilsonOther = otherCard?.id === "wilson" && ctx.isActiveAt({ row: otherR, col: c });
+          if ((!card || !ctx.isActiveAt({ row: r, col: c })) && !isWilsonOther) vazios++;
+        }
+      }
       return vazios > 0;
     }
   }
@@ -336,13 +344,7 @@ const CARD_DB = [
   P({id:"motolover",nome:"Luiz (Motolover)",base:3,faixa:"Adulto",temper:"Equilibrado",comp:"Silencioso",
      text:"-2 Pontos por cada passageiro no Busão que estiver sentado entre ele e o motorista.",
      penalty:(p,ctx,log)=>{
-       let n=0;
-       for(let c=0; c<p.col; c++) {
-         const card0 = ctx.grid[0][c].card;
-         if(card0 && ctx.isActiveAt({row:0, col:c})) n++;
-         const card1 = ctx.grid[1][c].card;
-         if(card1 && ctx.isActiveAt({row:1, col:c})) n++;
-       }
+       const n = ctx.countAheadBothRows(p);
        if(n){log(`-${2*n} ( -2 por ${n} entre ele e o motorista )`);}
        return -2*n;
      }
@@ -413,7 +415,7 @@ const CARD_DB = [
   }),
   P({id:"misterioso",nome:"O Misterioso",base:4,faixa:"Adulto",temper:"Tranquilo",comp:"Silencioso",
      text:"Só embarca se puder se sentar no fundo do Busão (coluna 6).",
-     require:(ctx,p)=> ({ok: p.col===5, msg:"Sô embarca no fundo do busão (coluna 6)."})
+     require:(ctx,p)=> ({ok: p.col===5, msg:"Só embarca no fundo do busão (coluna 6)."})
   }),
 
   // Passageiros Especiais
@@ -527,7 +529,7 @@ const APAIXONADOS = [
      text:"Pode atrair um(a) outro(a) apaixonado(a) de dentro de um Busão adversário para a sua mão.", allowDup:true, isApaixonado:true }),
   P({id:"apa_jessica",nome:"Jéssica (A Apaixonada)", base:4, faixa:"Jovem", temper:"Equilibrado", comp:"Barulhento",
      text:"Só pontua se estiver com outro(a) apaixonado(a) no Busão.", allowDup:true, isApaixonado:true,
-     scoreReq:(ctx,_p)=> ({ok: ctx.countBus(c=>c.isApaixonado)>1, msg:"Precisa estar com outro apaixonado no busão para pontuar."})
+     scoreReq:(ctx)=> ({ok: ctx.countBus(c=>c.isApaixonado)>1, msg:"Precisa estar com outro apaixonado no busão para pontuar."})
   }),
 ];
 
@@ -549,8 +551,12 @@ const ESTOU_NO_BUSAO = [
      text:"+5 pontos se, ao final do jogo, o Busão estiver completo, com todos os assentos ocupados.",
      ability:(_p,ctx,log)=>{
        let ocupados = 0;
-       for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(ctx.grid[r][c].card) ocupados++;
-       if(ocupados === 12) { log("+5 (Busão completo)"); return 5; }
+       for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) {
+         const card = ctx.grid[r][c].card;
+         if(card && ctx.isActiveAt({row:r, col:c})) ocupados++;
+       }
+       if(ctx.existsId("wilson")) ocupados++;
+       if(ocupados >= 12) { log("+5 (Busão completo)"); return 5; }
        return 0;
      }
   }),
@@ -616,15 +622,15 @@ const ESTOU_NO_BUSAO = [
        if(n){log(`+${3*n} (Acessibilidade ativa: +3 por ${n} Idoso adj.)`);} return 3*n; }
   }),
   P({id:"lucas",nome:"Lucas (O Mario do Carnaval)",base:6,faixa:"Adulto",temper:"Equilibrado",comp:"Comunicativo",
-     text:"Sô pontua se estiver adjacente ao passageiro 'Luigi do Carnaval'.",
+     text:"Só pontua se estiver adjacente ao passageiro 'Luigi do Carnaval'.",
      scoreReq:(ctx,p)=> ({ok: ctx.countAdj(p,c=>c.id==="guilherme")>0, msg:"Precisa estar adjacente a 'Guilherme (O Luigi do Carnaval)' para pontuar."})
   }),
   P({id:"guilherme",nome:"Guilherme (O Luigi do Carnaval)",base:6,faixa:"Adulto",temper:"Equilibrado",comp:"Comunicativo",
-     text:"Sô pontua se estiver adjacente ao passageiro 'Mario do Carnaval'.",
+     text:"Só pontua se estiver adjacente ao passageiro 'Mario do Carnaval'.",
      scoreReq:(ctx,p)=> ({ok: ctx.countAdj(p,c=>c.id==="lucas")>0, msg:"Precisa estar adjacente a 'Lucas (O Mario do Carnaval)' para pontuar."})
   }),
   P({id:"nelson",nome:"Nelson (O Nerd Velho)",base:6,faixa:"Adulto",temper:"Tranquilo",comp:"Silencioso",
-     text:"Sô pontua se estiver sozinho na coluna que ocupa.",
+     text:"Só pontua se estiver sozinho na coluna que ocupa.",
      scoreReq:(ctx,p)=> {
        const other = p.row===0 ? ctx.getPos(1,p.col) : ctx.getPos(0,p.col);
        const ok = !other.card;
@@ -693,7 +699,7 @@ const GRUPO_PAGODE = [
   }),
   P({id:"arlindo",nome:"Arlindo (O Pagodeiro no Tantan)",base:5,faixa:"Adulto",temper:"Equilibrado",comp:"Silencioso",
      text:"Exigência: Só embarca se outro passageiro do grupo de Pagode já estiver no Busão.",
-     require:(ctx)=> ({ok: ctx.countBus(c=>c.id && GRUPO_PAGODE.map(g=>g.id).includes(c.id)) > 0, msg:"Requer outro pagodeiro no busão."})
+     require:(ctx)=> ({ok: ctx.countBus(c=>c.id && c.id !== "arlindo" && GRUPO_PAGODE.some(g=>g.id===c.id)) > 0, msg:"Requer outro pagodeiro no busão."})
   }),
   P({id:"xande",nome:"Xande (O Pagodeiro no Reco-reco)",base:1,faixa:"Adulto",temper:"Caótico",comp:"Comunicativo",
      text:"Especial: Pode fazer um outro pagodeiro da sua mão embarcar sem custo.",
